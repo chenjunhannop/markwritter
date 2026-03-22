@@ -49,3 +49,6 @@ Thumbs.db
 # Test artifacts
 test-results/
 playwright-report/
+
+# Notes (local)
+note/

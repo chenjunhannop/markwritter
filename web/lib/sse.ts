@@ -3,7 +3,7 @@ export interface SSEEvent {
   content?: string;
 }
 
-export async function* parseSSEStream(
+async function* parseSSEStream(
   response: Response
 ): AsyncGenerator<SSEEvent> {
   const reader = response.body?.getReader();

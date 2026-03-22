@@ -40,23 +40,9 @@ export const useChatStore = create<ChatState>()(
   )
 );
 
-// Skill state
+// Skill type (used by API responses)
 export interface Skill {
   name: string;
   description: string;
   version: string;
 }
-
-interface SkillState {
-  skills: Skill[];
-  selectedSkill: Skill | null;
-  setSkills: (skills: Skill[]) => void;
-  selectSkill: (skill: Skill | null) => void;
-}
-
-export const useSkillStore = create<SkillState>()((set) => ({
-  skills: [],
-  selectedSkill: null,
-  setSkills: (skills) => set({ skills }),
-  selectSkill: (skill) => set({ selectedSkill: skill }),
-}));

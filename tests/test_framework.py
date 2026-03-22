@@ -3,7 +3,6 @@
 import pytest
 from pathlib import Path
 import tempfile
-import shutil
 import logging
 
 from markwritter.models import SkillDefinition, SkillInput, SkillOutput, SkillExecution
