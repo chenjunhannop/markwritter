@@ -1,0 +1,33 @@
+llm:
+  default_model: "qwen/qwen3.5-plus"
+  timeout: 30
+  max_retries: 2
+  temperature: 0.1
+
+cache:
+  enabled: true
+  ttl_seconds: 3600
+  max_size: 1000
+
+parser:
+  confidence_threshold: 0.7
+
+# Logging configuration
+logging:
+  level: INFO
+
+  outputs:
+    # Console output - developer friendly
+    - type: console
+      level: INFO
+      format: colored
+
+    # File output - production ready
+    - type: file
+      path: logs/markwritter.log
+      level: DEBUG
+      format: json
+      rotation:
+        max_size_mb: 10
+        backup_count: 5
+        compress: true
