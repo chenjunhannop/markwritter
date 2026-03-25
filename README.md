@@ -1,53 +1,122 @@
 # Markwritter
 
-A lightweight Agent orchestration framework.
+**AI-Native Knowledge Management Tool**
+
+> Markwritter = Obsidian + memU + AI Agent
+
+An AI-native knowledge management tool that transforms note-taking from simple storage into intelligent thinking extension.
 
 ## Overview
 
-Markwritter is a minimal Agent orchestration framework that parses user intent, manages Skills, and delegates execution to subagents. The framework itself is a lightweight shell—all functionality is provided through pluggable Skills.
+Markwritter is an AI-powered intelligent note-taking application built on Obsidian's Markdown file system. It provides three core modules: Query, Record, and Explore.
 
-## Philosophy
+### Key Features
 
-- **Framework as Core**: The framework understands user intent, manages Skills, schedules execution
-- **Skills as Extensions**: Specific functions are implemented through Skills, keeping the framework lean
-- **Dialogue-Based Interaction**: Users express needs in natural language, the framework parses and routes
-- **Subagent Execution**: Framework delegates tasks to subagents rather than executing directly
+- **Query Module**: Natural language search, semantic retrieval, intelligent Q&A
+- **Record Module**: Quick capture, AI-assisted writing, template system
+- **Explore Module**: Knowledge graph, relationship discovery, topic clustering
 
-## Project Structure
+### Core Value
+
+```
+Traditional Note Tools: Store -> Search -> Forget
+Markwritter:           Store -> Organize -> Connect -> Utilize
+```
+
+| Dimension | Traditional Tools | Markwritter |
+|-----------|------------------|-------------|
+| **Capture** | Manual input | AI-assisted, voice input, web clipping |
+| **Organize** | Manual categorization | Auto-classification, semantic clustering |
+| **Retrieve** | Keyword search | Semantic search, natural language Q&A |
+| **Connect** | Manual links | Auto-discover relationships, knowledge graph |
+| **Utilize** | Copy-paste | AI-generated summaries, intelligent Q&A |
+
+## Architecture
 
 ```
 markwritter/
-├── markwritter/            # Framework core
-│   ├── __init__.py
-│   ├── cli.py             # Typer CLI entry
-│   ├── core.py            # Framework orchestrator
-│   ├── models.py          # Pydantic models
-│   ├── parser.py          # Intent parser
-│   ├── registry.py        # Skill registry
-│   └── executor.py        # Subagent executor
-├── skills/                # Skill definitions
+├── markwritter/          # Python backend core
+│   ├── core.py           # Framework orchestrator
+│   ├── parser.py         # Intent parser
+│   ├── registry.py       # Skill registry
+│   ├── executor.py       # Skill executor
+│   ├── llm_client.py     # LLM client (LiteLLM)
+│   └── config.py         # Configuration
+├── api/                  # FastAPI REST API
+│   ├── main.py           # API entry point
+│   ├── routers/          # API routers
+│   ├── models/           # Pydantic models
+│   └── services/         # Business logic
+├── web/                  # Next.js frontend
+│   ├── app/              # App Router pages
+│   ├── components/       # React components
+│   ├── lib/              # Utilities
+│   └── hooks/            # React hooks
+├── skills/               # Skill definitions
 │   └── hello/            # Example skill
-│       ├── skill.yaml    # Skill metadata
-│       └── run.py        # Skill implementation
 ├── tests/                # Test suite
-│   └── test_framework.py
 ├── note/                 # Design documentation
-│   ├── framework-design.md
-│   ├── openclaw-analysis.md
-│   ├── mvp-design.md     # (Legacy: old design)
-│   └── core-design.md    # (Legacy: old design)
-└── pyproject.toml        # Project configuration
+└── docs/                 # Project documentation
 ```
+
+## Tech Stack
+
+| Layer | Technology | Version |
+|-------|------------|---------|
+| **Frontend** | Next.js | 15.x |
+| **UI Library** | Radix UI + Tailwind | 4.x |
+| **State Management** | Zustand | 5.x |
+| **Backend** | FastAPI | latest |
+| **AI Orchestration** | LangGraph | 1.x |
+| **Memory Service** | memU | latest |
+| **Database** | SQLite / PostgreSQL | - |
+| **Vector Search** | pgvector / FAISS | - |
+| **Desktop** | Tauri (planned) | 2.x |
 
 ## Quick Start
 
-### Installation
+### Prerequisites
+
+- Python 3.10+
+- Node.js 18+
+- pnpm (recommended)
+
+### Backend Setup
 
 ```bash
+# Install Python dependencies
 pip install -e .
+
+# Or with development dependencies
+pip install -e ".[dev]"
+
+# Configure LLM (optional, for AI features)
+# Edit config.yaml with your LLM settings
 ```
 
-### CLI Usage
+### Frontend Setup
+
+```bash
+cd web
+
+# Install dependencies
+pnpm install
+
+# Start development server
+pnpm dev
+```
+
+### Running the API Server
+
+```bash
+# Start FastAPI server
+uvicorn api.main:app --reload
+
+# API will be available at http://localhost:8000
+# Docs at http://localhost:8000/docs
+```
+
+## CLI Usage
 
 ```bash
 # List available skills
@@ -62,80 +131,64 @@ markwritter chat
 > hello --name Alice
 ```
 
-## Creating a Skill
+## Project Status
 
-1. Create a directory under `skills/<skill-name>/`
-2. Add `skill.yaml` defining inputs, outputs, and execution
-3. Add `run.py` (or other script) implementing the skill
+### Completed
 
-Example `skill.yaml`:
+- [x] Core framework skeleton
+- [x] Registry and Parser
+- [x] Executor and subagent execution
+- [x] CLI interface
+- [x] FastAPI backend
+- [x] Next.js frontend foundation
+- [x] LiteLLM integration
 
-```yaml
-name: hello
-description: Simple greeting skill
-version: 1.0.0
+### In Progress
 
-inputs:
-  - name: name
-    type: string
-    description: Name to greet
-    required: true
-    default: World
+- [ ] memU memory service integration
+- [ ] Obsidian Vault file operations
+- [ ] Query module (semantic search, RAG)
+- [ ] Record module (editor, AI assist)
 
-output:
-  type: string
-  description: Greeting message
+### Planned
 
-execution:
-  command: python
-  script: run.py
-  timeout: 30
-```
-
-Example `run.py`:
-
-```python
-import argparse
-
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--name", default="World")
-    args = parser.parse_args()
-    print(f"Hello, {args.name}!")
-
-if __name__ == "__main__":
-    main()
-```
-
-## Architecture
-
-```
-User Input → Parser → Registry → Executor → Skill (Subagent)
-                ↓
-         Skill Definition (YAML)
-```
-
-- **Parser**: Extracts skill name and parameters from natural language
-- **Registry**: Loads and manages skill definitions from `skills/` directory
-- **Executor**: Runs skills as subagent subprocesses
-- **Skill**: Independent agent that performs specific tasks
+- [ ] Explore module (knowledge graph)
+- [ ] Desktop app (Tauri)
+- [ ] Cloud sync
+- [ ] Plugin system
 
 ## Development
 
 ### Running Tests
 
 ```bash
+# Backend tests
 pytest tests/ -v
+
+# Frontend tests
+cd web
+pnpm test
+
+# E2E tests
+pnpm test:e2e
 ```
 
-### Project Status
+### Code Quality
 
-- [x] Phase 1: Core framework skeleton
-- [x] Phase 2: Registry and Parser
-- [x] Phase 3: Executor and subagent execution
-- [x] Phase 4: CLI interface
-- [ ] Phase 5: Advanced parser (LLM-based intent recognition)
-- [ ] Phase 6: GUI interface
+```bash
+# Format code
+black markwritter/ api/ tests/
+
+# Lint
+ruff check markwritter/ api/ tests/
+```
+
+## Documentation
+
+- [Transformation Plan](note/note-app-transformation-plan.md) - Full product roadmap
+- [Framework Design](note/framework-design.md) - Architecture details
+- [GUI Implementation](note/gui-implementation-plan.md) - Frontend design
+- [LiteLLM Integration](note/litellm-integration-plan.md) - LLM configuration
 
 ## License
 

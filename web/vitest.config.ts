@@ -19,6 +19,10 @@ export default defineConfig({
         'components/chat/**/*.{ts,tsx}',
         'components/layout/**/*.{ts,tsx}',
         'components/skills/**/*.{ts,tsx}',
+        'components/editor/**/*.{ts,tsx}',
+        'components/record/**/*.{ts,tsx}',
+        'components/query/**/*.{ts,tsx}',
+        'components/settings/**/*.{ts,tsx}',
       ],
       exclude: [
         'lib/**/*.test.ts',

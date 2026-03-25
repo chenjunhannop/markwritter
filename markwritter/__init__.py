@@ -12,15 +12,20 @@ from markwritter.models import (
     GlobalConfig,
     LLMConfig,
     LoggingConfig,
+    ModelCapability,
+    ModelDefinition,
     OutputConfig,
     ParserConfig,
+    ProviderConfig,
     RotationConfig,
     SkillDefinition,
     SkillExecution,
     SkillInput,
     SkillOutput,
 )
+from markwritter.obsidian import Note, NoteMeta, ObsidianVault
 from markwritter.parser import InputParser, ParsedIntent
+from markwritter.provider_registry import ProviderRegistry
 from markwritter.registry import SkillRegistry
 
 __all__ = [
@@ -47,4 +52,13 @@ __all__ = [
     "setup_logging",
     "get_logger",
     "reset_logging",
+    # Obsidian module
+    "Note",
+    "NoteMeta",
+    "ObsidianVault",
+    # Provider Configuration (Phase 1 & 2)
+    "ModelCapability",
+    "ModelDefinition",
+    "ProviderConfig",
+    "ProviderRegistry",
 ]

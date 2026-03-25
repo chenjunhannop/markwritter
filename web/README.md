@@ -1,36 +1,130 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Markwritter Web Frontend
+
+Next.js 15 frontend for Markwritter - an AI-native knowledge management tool.
+
+## Features
+
+- **Query Interface**: Natural language search and semantic retrieval
+- **Record Interface**: Note editor with AI assistance
+- **Explore Interface**: Knowledge graph visualization
+
+## Tech Stack
+
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| Next.js | 15.x | App Router, SSR |
+| React | 19.x | UI components |
+| TypeScript | 5.x | Type safety |
+| Tailwind CSS | 4.x | Styling |
+| Zustand | 5.x | State management |
+| Radix UI | latest | Accessible components |
+| React Markdown | 10.x | Markdown rendering |
+| Lucide React | latest | Icons |
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 18+
+- pnpm (recommended)
+
+### Installation
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Development
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+pnpm dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Open [http://localhost:3000](http://localhost:3000) to view the application.
 
-## Learn More
+### Build
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+pnpm build
+pnpm start
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Project Structure
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+web/
+├── app/              # Next.js App Router pages
+│   ├── page.tsx      # Home page
+│   ├── layout.tsx    # Root layout
+│   ├── globals.css   # Global styles
+│   └── api/          # API routes
+├── components/       # React components
+│   └── ui/           # Shadcn/UI components
+├── lib/              # Utilities and helpers
+├── hooks/            # Custom React hooks
+├── e2e/              # Playwright E2E tests
+└── public/           # Static assets
+```
 
-## Deploy on Vercel
+## Testing
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Unit Tests
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+pnpm test
+pnpm test:run
+pnpm test:coverage
+```
+
+### E2E Tests
+
+```bash
+pnpm test:e2e
+pnpm test:e2e:ui      # Interactive UI mode
+pnpm test:e2e:debug   # Debug mode
+pnpm test:e2e:headed  # Run with browser visible
+```
+
+## API Integration
+
+The frontend connects to the FastAPI backend at `http://localhost:8000` by default.
+
+### Key Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/query` | POST | Search and query notes |
+| `/api/record` | POST | Create/update notes |
+| `/api/explore` | GET | Get knowledge graph data |
+| `/api/chat` | WS | Real-time conversation |
+
+## Environment Variables
+
+Create a `.env.local` file:
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8000
+```
+
+## Deployment
+
+### Docker
+
+```bash
+docker build -f Dockerfile.web -t markwritter-web .
+docker run -p 3000:3000 markwritter-web
+```
+
+### Vercel
+
+The easiest deployment method:
+
+```bash
+vercel deploy
+```
+
+## Related Documentation
+
+- [Main Project README](../README.md)
+- [Project Overview](../docs/OVERVIEW.md)
+- [Transformation Plan](../note/note-app-transformation-plan.md)

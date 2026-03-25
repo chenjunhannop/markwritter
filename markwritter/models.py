@@ -6,6 +6,54 @@ from typing import Any, Literal, Optional, Self
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 
+# =============================================================================
+# Phase 1: Provider Configuration Models
+# =============================================================================
+
+
+class ModelCapability(BaseModel):
+    """Model capability declarations.
+
+    Describes what capabilities a model supports.
+    """
+
+    vision: bool = False
+    tools: bool = False
+    streaming: bool = False
+
+
+class ModelDefinition(BaseModel):
+    """Model definition for a specific model within a provider.
+
+    Defines the properties and capabilities of a model.
+    """
+
+    id: str
+    name: Optional[str] = None
+    capabilities: ModelCapability = Field(default_factory=ModelCapability)
+    context_window: int = 4096
+    max_tokens: int = 4096
+
+
+class ProviderConfig(BaseModel):
+    """LLM provider configuration.
+
+    Defines a provider and its associated models.
+    """
+
+    name: str
+    provider_type: Literal["openai", "anthropic", "google", "openai-compatible"]
+    api_key_env: str
+    base_url: Optional[str] = None
+    models: list[ModelDefinition] = Field(default_factory=list)
+    is_default: bool = False
+
+
+# =============================================================================
+# Core Configuration Models
+# =============================================================================
+
+
 class SkillInput(BaseModel):
     """Definition of a skill input parameter."""
 
@@ -63,12 +111,17 @@ class ExecutionResult(BaseModel):
 
 
 class LLMConfig(BaseModel):
-    """LLM configuration model."""
+    """LLM configuration model.
+
+    Supports multiple providers with model definitions and fallback chains.
+    """
 
     default_model: str = "qwen/qwen3.5-plus"
     timeout: int = 30
     max_retries: int = 2
     temperature: float = 0.1
+    providers: list[ProviderConfig] = Field(default_factory=list)
+    fallback_chain: list[str] = Field(default_factory=list)
 
 
 class CacheConfig(BaseModel):

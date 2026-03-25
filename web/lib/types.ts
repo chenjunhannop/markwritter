@@ -99,7 +99,18 @@ export interface SkillRunResponse {
 /**
  * Type of SSE event from chat stream
  */
-export type ChatEventType = 'thinking' | 'text_delta' | 'done' | 'error';
+export type ChatEventType = 'thinking' | 'text_delta' | 'sources' | 'done' | 'error';
+
+/**
+ * Source reference for streaming events
+ */
+export interface StreamSource {
+  id: string;
+  title: string;
+  content: string;
+  score?: number;
+  [key: string]: unknown;
+}
 
 /**
  * SSE event from chat stream (matches ChatEvent)
@@ -109,6 +120,8 @@ export interface ChatEvent {
   type: ChatEventType;
   /** Event content (empty for thinking/done, text for text_delta, message for error) */
   content: string;
+  /** Source references (for sources event type) */
+  sources?: StreamSource[];
 }
 
 // ==================== Session Types ====================

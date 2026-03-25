@@ -1,9 +1,12 @@
 """Skill registry for managing available skills."""
 
+import logging
 from pathlib import Path
 from typing import Optional
 
 from markwritter.models import SkillDefinition
+
+logger = logging.getLogger(__name__)
 
 
 class SkillRegistry:
@@ -29,7 +32,7 @@ class SkillRegistry:
                     skill_def = SkillDefinition.from_yaml(yaml_path)
                     self._skills[skill_def.name] = skill_def
                 except Exception as e:
-                    print(f"Warning: Failed to load skill from {skill_dir}: {e}")
+                    logger.warning("Failed to load skill from %s: %s", skill_dir, e)
 
     def get(self, name: str) -> Optional[SkillDefinition]:
         """Get a skill definition by name."""
