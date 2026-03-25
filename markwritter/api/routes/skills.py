@@ -2,8 +2,8 @@
 
 from fastapi import APIRouter, HTTPException
 
-from api.models.skill import SkillResponse
-from api.services.framework_bridge import get_framework
+from markwritter.api.models.skill import SkillResponse
+from markwritter.api.services.framework_bridge import get_framework
 
 router = APIRouter(prefix="/api/skills", tags=["skills"])
 

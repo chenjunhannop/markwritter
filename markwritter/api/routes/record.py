@@ -7,14 +7,13 @@ from __future__ import annotations
 
 import json
 import logging
-import re
 from typing import Any, Optional
 
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from markwritter.record.assistant import AutoClassifier, ClassifyResult, WritingAssistant
+from markwritter.record.assistant import AutoClassifier, WritingAssistant
 
 logger = logging.getLogger(__name__)
 
@@ -348,17 +347,17 @@ def _is_safe_path(path: str) -> bool:
             return False
 
     # Check for null bytes
-    if '\x00' in decoded_path or '%00' in path.lower():
+    if "\x00" in decoded_path or "%00" in path.lower():
         return False
 
     # Check for dangerous patterns in decoded path
     dangerous_patterns = [
-        '..',  # Parent directory
-        '~',   # Home directory
+        "..",  # Parent directory
+        "~",  # Home directory
     ]
 
     # Normalize path separators
-    normalized = decoded_path.replace('\\', '/')
+    normalized = decoded_path.replace("\\", "/")
 
     for pattern in dangerous_patterns:
         if pattern in normalized:
@@ -373,24 +372,24 @@ def _is_safe_path(path: str) -> bool:
         return False
 
     # Check for Windows drive letters (e.g., C:)
-    if len(decoded_path) >= 2 and decoded_path[1] == ':':
+    if len(decoded_path) >= 2 and decoded_path[1] == ":":
         if decoded_path[0].isalpha():
             return False
 
     # Check for UNC paths (\\server\share)
-    if decoded_path.startswith('\\\\') or decoded_path.startswith('//'):
+    if decoded_path.startswith("\\\\") or decoded_path.startswith("//"):
         return False
 
     # Additional check: ensure no path traversal after normalization
     # This catches cases like "folder/../../../etc/passwd"
-    parts = [p for p in normalized.split('/') if p]
+    parts = [p for p in normalized.split("/") if p]
     depth = 0
     for part in parts:
-        if part == '..':
+        if part == "..":
             depth -= 1
             if depth < 0:
                 return False
-        elif part != '.':
+        elif part != ".":
             depth += 1
 
     return True
@@ -455,6 +454,7 @@ async def continue_writing_stream(request: ContinueWritingRequest) -> StreamingR
         Streaming response
     """
     if not _writing_assistant:
+
         async def error_stream():
             yield f"data: {json.dumps({'error': 'Writing assistant not configured'})}\n\n"
 

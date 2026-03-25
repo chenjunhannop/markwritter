@@ -319,12 +319,14 @@ class KeywordSearch:
             for row in cursor.fetchall():
                 note_path, title, score, snippet = row
                 # BM25 returns negative scores (lower is better), negate for display
-                results.append(SearchResult(
-                    note_path=note_path,
-                    title=title,
-                    score=-score if score < 0 else score,
-                    snippet=snippet or "",
-                ))
+                results.append(
+                    SearchResult(
+                        note_path=note_path,
+                        title=title,
+                        score=-score if score < 0 else score,
+                        snippet=snippet or "",
+                    )
+                )
 
             return results
 
@@ -377,12 +379,14 @@ class KeywordSearch:
             results = []
             for row in cursor.fetchall():
                 note_path, title, score, highlighted = row
-                results.append(HighlightResult(
-                    note_path=note_path,
-                    title=title,
-                    score=-score if score < 0 else score,
-                    highlighted_snippet=highlighted or "",
-                ))
+                results.append(
+                    HighlightResult(
+                        note_path=note_path,
+                        title=title,
+                        score=-score if score < 0 else score,
+                        highlighted_snippet=highlighted or "",
+                    )
+                )
 
             return results
 
@@ -404,7 +408,7 @@ class KeywordSearch:
         """
         # Remove special FTS5 characters that could cause issues
         # Keep alphanumeric, spaces, and asterisk for prefix matching
-        sanitized = re.sub(r'[^\w\s\*]', ' ', query)
+        sanitized = re.sub(r"[^\w\s\*]", " ", query)
 
         # Split into terms and join with OR for broader matching
         terms = sanitized.split()
@@ -544,12 +548,14 @@ class SemanticSearch:
                         # Note might not exist anymore
                         continue
 
-                results.append(SearchResult(
-                    note_path=note_path,
-                    title=title,
-                    score=item.get("score", 0.0),
-                    snippet=snippet,
-                ))
+                results.append(
+                    SearchResult(
+                        note_path=note_path,
+                        title=title,
+                        score=item.get("score", 0.0),
+                        snippet=snippet,
+                    )
+                )
 
             return results
 
@@ -676,8 +682,7 @@ class SemanticSearch:
                     semantic_score=normalized_score,
                     keyword_score=existing.keyword_score,
                     combined_score=(
-                        existing.keyword_score * keyword_weight +
-                        normalized_score * semantic_weight
+                        existing.keyword_score * keyword_weight + normalized_score * semantic_weight
                     ),
                     snippet=r.snippet,
                 )
@@ -814,12 +819,14 @@ class QASystem:
                     except Exception:
                         continue
 
-                sources.append(SourceReference(
-                    note_path=note_path,
-                    title=title,
-                    relevance_score=item.get("score", 0.0),
-                    snippet=content[:200],
-                ))
+                sources.append(
+                    SourceReference(
+                        note_path=note_path,
+                        title=title,
+                        relevance_score=item.get("score", 0.0),
+                        snippet=content[:200],
+                    )
+                )
 
                 context_parts.append(f"## {title}\n\n{content}")
 
@@ -942,11 +949,13 @@ Answer:"""
                     except Exception:
                         pass
 
-                sources.append({
-                    "note_path": note_path,
-                    "title": title,
-                    "relevance_score": item.get("score", 0.0),
-                })
+                sources.append(
+                    {
+                        "note_path": note_path,
+                        "title": title,
+                        "relevance_score": item.get("score", 0.0),
+                    }
+                )
 
             # Stream answer
             async for chunk in self._stream_answer(

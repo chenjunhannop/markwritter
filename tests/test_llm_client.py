@@ -1,6 +1,5 @@
 """Tests for LLM Client with Provider Registry support."""
 
-import hashlib
 import time
 from dataclasses import dataclass
 from typing import Optional
@@ -10,7 +9,6 @@ import pytest
 
 from markwritter.llm_client import LLMClient, LLMError, MemoryCache
 from markwritter.models import CacheConfig, GlobalConfig, LLMConfig
-
 
 # =============================================================================
 # Mock Provider Registry for Testing
@@ -167,7 +165,9 @@ def global_config(llm_config: LLMConfig) -> GlobalConfig:
 
 
 @pytest.fixture
-def client_with_registry(global_config: GlobalConfig, mock_registry: MockProviderRegistry) -> LLMClient:
+def client_with_registry(
+    global_config: GlobalConfig, mock_registry: MockProviderRegistry
+) -> LLMClient:
     """Create LLM client with registry."""
     return LLMClient(config=global_config.llm, registry=mock_registry)
 
@@ -186,7 +186,9 @@ def client_without_registry(global_config: GlobalConfig) -> LLMClient:
 class TestLLMClientRegistrySupport:
     """Tests for ProviderRegistry integration."""
 
-    def test_client_accepts_registry_in_constructor(self, llm_config: LLMConfig, mock_registry: MockProviderRegistry) -> None:
+    def test_client_accepts_registry_in_constructor(
+        self, llm_config: LLMConfig, mock_registry: MockProviderRegistry
+    ) -> None:
         """Test that LLMClient accepts registry parameter."""
         client = LLMClient(config=llm_config, registry=mock_registry)
         assert client.registry is mock_registry
@@ -204,9 +206,7 @@ class TestLLMClientRegistrySupport:
         resolved = client_with_registry._resolve_model("gpt-4")
         assert resolved == "openai/gpt-4"
 
-    def test_client_handles_full_model_name(
-        self, client_with_registry: LLMClient
-    ) -> None:
+    def test_client_handles_full_model_name(self, client_with_registry: LLMClient) -> None:
         """Test that client handles full provider/model format."""
         resolved = client_with_registry._resolve_model("anthropic/claude-3-opus")
         assert resolved == "anthropic/claude-3-opus"
@@ -267,9 +267,7 @@ class TestFallbackChain:
         models = client_with_registry._get_fallback_chain("gpt-4", fallback_models=None)
         assert models == ["openai/gpt-4"]
 
-    def test_resolve_model_includes_fallbacks(
-        self, client_with_registry: LLMClient
-    ) -> None:
+    def test_resolve_model_includes_fallbacks(self, client_with_registry: LLMClient) -> None:
         """Test that resolve includes fallback models."""
         models = client_with_registry._get_fallback_chain(
             "gpt-4",
@@ -277,9 +275,7 @@ class TestFallbackChain:
         )
         assert models == ["openai/gpt-4", "anthropic/claude-3-sonnet", "qwen/qwen3.5-plus"]
 
-    def test_fallback_chain_deduplicates_models(
-        self, client_with_registry: LLMClient
-    ) -> None:
+    def test_fallback_chain_deduplicates_models(self, client_with_registry: LLMClient) -> None:
         """Test that duplicate models are removed."""
         models = client_with_registry._get_fallback_chain(
             "gpt-4",
@@ -288,13 +284,15 @@ class TestFallbackChain:
         assert models == ["openai/gpt-4", "anthropic/claude-3-sonnet"]
         assert len(models) == 2  # No duplicate
 
-    def test_fallback_chain_preserves_order(
-        self, client_with_registry: LLMClient
-    ) -> None:
+    def test_fallback_chain_preserves_order(self, client_with_registry: LLMClient) -> None:
         """Test that fallback order is preserved."""
         models = client_with_registry._get_fallback_chain(
             "gpt-4",
-            fallback_models=["anthropic/claude-3-opus", "qwen/qwen3.5-plus", "anthropic/claude-3-sonnet"],
+            fallback_models=[
+                "anthropic/claude-3-opus",
+                "qwen/qwen3.5-plus",
+                "anthropic/claude-3-sonnet",
+            ],
         )
         assert models[0] == "openai/gpt-4"  # Primary first
         assert models[1] == "anthropic/claude-3-opus"  # Then fallbacks in order
@@ -762,32 +760,24 @@ class TestMemoryCache:
 class TestEdgeCases:
     """Tests for edge cases and boundary conditions."""
 
-    def test_empty_fallback_list(
-        self, client_with_registry: LLMClient
-    ) -> None:
+    def test_empty_fallback_list(self, client_with_registry: LLMClient) -> None:
         """Test handling of empty fallback list."""
         models = client_with_registry._get_fallback_chain("gpt-4", fallback_models=[])
         assert models == ["openai/gpt-4"]
 
-    def test_none_fallback_list(
-        self, client_with_registry: LLMClient
-    ) -> None:
+    def test_none_fallback_list(self, client_with_registry: LLMClient) -> None:
         """Test handling of None fallback list."""
         models = client_with_registry._get_fallback_chain("gpt-4", fallback_models=None)
         assert models == ["openai/gpt-4"]
 
-    def test_model_name_with_multiple_slashes(
-        self, client_with_registry: LLMClient
-    ) -> None:
+    def test_model_name_with_multiple_slashes(self, client_with_registry: LLMClient) -> None:
         """Test model names with multiple slashes."""
         # Some HuggingFace models like 'meta-llama/Llama-2-70b-chat-hf'
         provider, model = client_with_registry._parse_model_string("meta-llama/Llama-2-70b")
         assert provider == "meta-llama"
         assert model == "Llama-2-70b"
 
-    def test_whitespace_in_model_name(
-        self, client_with_registry: LLMClient
-    ) -> None:
+    def test_whitespace_in_model_name(self, client_with_registry: LLMClient) -> None:
         """Test handling of whitespace in model names."""
         provider, model = client_with_registry._parse_model_string("  openai / gpt-4  ")
         # Should strip whitespace
@@ -806,9 +796,7 @@ class TestEdgeCases:
         result = client_with_registry.complete("Test prompt", model="gpt-4")
         assert result == ""
 
-    def test_fallback_chain_with_invalid_model(
-        self, client_with_registry: LLMClient
-    ) -> None:
+    def test_fallback_chain_with_invalid_model(self, client_with_registry: LLMClient) -> None:
         """Test fallback chain with invalid model name."""
         models = client_with_registry._get_fallback_chain(
             "invalid-model",

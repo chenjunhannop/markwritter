@@ -1,8 +1,5 @@
 """Tests for Provider Configuration models (Phase 1)."""
 
-import os
-from typing import Optional
-
 import pytest
 from pydantic import ValidationError
 
@@ -293,9 +290,7 @@ class TestProviderConfigIntegration:
                     models=[
                         ModelDefinition(
                             id="claude-3-opus",
-                            capabilities=ModelCapability(
-                                vision=True, tools=True, streaming=True
-                            ),
+                            capabilities=ModelCapability(vision=True, tools=True, streaming=True),
                         ),
                     ],
                 ),

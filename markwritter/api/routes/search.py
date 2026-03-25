@@ -3,7 +3,7 @@
 Provides endpoints for semantic search and Q&A over notes.
 """
 
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import APIRouter, Query
 from pydantic import BaseModel, Field

@@ -5,13 +5,12 @@ TDD approach: These tests define the expected behavior before implementation.
 
 import tempfile
 from pathlib import Path
-from typing import Any, Generator
+from typing import Generator
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from markwritter.query.search import HybridSearchResult, SemanticSearch, SearchResult
-
+from markwritter.query.search import HybridSearchResult, SearchResult, SemanticSearch
 
 # ==============================================================================
 # Fixtures
@@ -25,8 +24,7 @@ def temp_vault() -> Generator[Path, None, None]:
         vault_path = Path(tmpdir)
 
         # Create sample notes
-        (vault_path / "python-testing.md").write_text(
-            """---
+        (vault_path / "python-testing.md").write_text("""---
 title: Python Testing Guide
 tags: [python, testing, tdd]
 ---
@@ -35,11 +33,9 @@ tags: [python, testing, tdd]
 
 This guide covers TDD practices in Python.
 Use pytest for writing unit tests.
-"""
-        )
+""")
 
-        (vault_path / "fastapi-tutorial.md").write_text(
-            """---
+        (vault_path / "fastapi-tutorial.md").write_text("""---
 title: FastAPI Tutorial
 tags: [python, fastapi, web]
 ---
@@ -48,12 +44,10 @@ tags: [python, fastapi, web]
 
 Learn to build APIs with FastAPI.
 FastAPI is a modern web framework for Python.
-"""
-        )
+""")
 
         (vault_path / "projects").mkdir()
-        (vault_path / "projects" / "my-project.md").write_text(
-            """---
+        (vault_path / "projects" / "my-project.md").write_text("""---
 title: My Project
 tags: [project]
 ---
@@ -62,8 +56,7 @@ tags: [project]
 
 Project description.
 Uses Python for backend.
-"""
-        )
+""")
 
         yield vault_path
 
@@ -72,22 +65,24 @@ Uses Python for backend.
 def mock_memory_service() -> MagicMock:
     """Create a mock memory service for semantic search."""
     service = MagicMock()
-    service.retrieve = AsyncMock(return_value={
-        "items": [
-            {
-                "id": "item-1",
-                "content": "Python testing guide with pytest",
-                "score": 0.95,
-                "user": {"note_path": "python-testing.md"},
-            },
-            {
-                "id": "item-2",
-                "content": "FastAPI web framework tutorial",
-                "score": 0.85,
-                "user": {"note_path": "fastapi-tutorial.md"},
-            },
-        ]
-    })
+    service.retrieve = AsyncMock(
+        return_value={
+            "items": [
+                {
+                    "id": "item-1",
+                    "content": "Python testing guide with pytest",
+                    "score": 0.95,
+                    "user": {"note_path": "python-testing.md"},
+                },
+                {
+                    "id": "item-2",
+                    "content": "FastAPI web framework tutorial",
+                    "score": 0.85,
+                    "user": {"note_path": "fastapi-tutorial.md"},
+                },
+            ]
+        }
+    )
     return service
 
 
@@ -125,9 +120,7 @@ class TestSemanticSearchInit:
 
         assert search.memory_service == mock_memory_service
 
-    def test_init_with_vault(
-        self, mock_memory_service: MagicMock, mock_vault: MagicMock
-    ) -> None:
+    def test_init_with_vault(self, mock_memory_service: MagicMock, mock_vault: MagicMock) -> None:
         """Test initialization with vault."""
         search = SemanticSearch(
             memory_service=mock_memory_service,
@@ -249,16 +242,18 @@ class TestSemanticSearchSearch:
         mock_vault.read_note.side_effect = mock_read_note
 
         # Return item for missing note
-        mock_memory_service.retrieve = AsyncMock(return_value={
-            "items": [
-                {
-                    "id": "item-1",
-                    "content": "Test",
-                    "score": 0.9,
-                    "user": {"note_path": "missing-note.md"},
-                },
-            ]
-        })
+        mock_memory_service.retrieve = AsyncMock(
+            return_value={
+                "items": [
+                    {
+                        "id": "item-1",
+                        "content": "Test",
+                        "score": 0.9,
+                        "user": {"note_path": "missing-note.md"},
+                    },
+                ]
+            }
+        )
 
         search = SemanticSearch(
             memory_service=mock_memory_service,
@@ -339,16 +334,18 @@ class TestSemanticSearchHybrid:
     ) -> None:
         """Test that hybrid search deduplicates results."""
         # Both searches return same note
-        mock_memory_service.retrieve = AsyncMock(return_value={
-            "items": [
-                {
-                    "id": "item-1",
-                    "content": "Python testing",
-                    "score": 0.95,
-                    "user": {"note_path": "python-testing.md"},
-                },
-            ]
-        })
+        mock_memory_service.retrieve = AsyncMock(
+            return_value={
+                "items": [
+                    {
+                        "id": "item-1",
+                        "content": "Python testing",
+                        "score": 0.95,
+                        "user": {"note_path": "python-testing.md"},
+                    },
+                ]
+            }
+        )
 
         search = SemanticSearch(
             memory_service=mock_memory_service,

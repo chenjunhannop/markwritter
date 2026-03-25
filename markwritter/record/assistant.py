@@ -465,11 +465,7 @@ Response (JSON array only):"""
             if json_match:
                 tags = json.loads(json_match.group())
                 if isinstance(tags, list):
-                    return [
-                        self._normalize_tag(str(tag))
-                        for tag in tags
-                        if tag
-                    ]
+                    return [self._normalize_tag(str(tag)) for tag in tags if tag]
         except (json.JSONDecodeError, ValueError) as e:
             logger.warning(f"Failed to parse tags result: {e}")
 

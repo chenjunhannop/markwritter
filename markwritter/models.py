@@ -5,7 +5,6 @@ from typing import Any, Literal, Optional, Self
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-
 # =============================================================================
 # Phase 1: Provider Configuration Models
 # =============================================================================

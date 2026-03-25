@@ -7,12 +7,10 @@ import sqlite3
 import tempfile
 from pathlib import Path
 from typing import Generator
-from unittest.mock import MagicMock, patch
 
 import pytest
 
 from markwritter.query.search import HighlightResult, KeywordSearch, SearchResult
-
 
 # ==============================================================================
 # Fixtures

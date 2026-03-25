@@ -2,8 +2,8 @@
  * Type definitions for Markwritter
  *
  * These types match the backend API models defined in:
- * - api/models/skill.py (SkillResponse, SkillRunRequest, SkillRunResponse)
- * - api/models/chat.py (ChatRequest, ChatEvent)
+ * - markwritter/api/models/skill.py (SkillResponse, SkillRunRequest, SkillRunResponse)
+ * - markwritter/api/models/chat.py (ChatRequest, ChatEvent)
  * - markwritter/models.py (SkillDefinition, SkillInput, SkillOutput)
  */
 

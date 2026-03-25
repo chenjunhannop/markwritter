@@ -1,16 +1,17 @@
 """Tests for Markwritter framework."""
 
-import pytest
-from pathlib import Path
-import tempfile
 import logging
+import tempfile
+from pathlib import Path
 
-from markwritter.models import SkillDefinition, SkillInput, SkillOutput, SkillExecution
-from markwritter.registry import SkillRegistry
-from markwritter.executor import SkillExecutor
-from markwritter.parser import InputParser
+import pytest
+
 from markwritter.core import Framework
+from markwritter.executor import SkillExecutor
 from markwritter.logger import reset_logging
+from markwritter.models import SkillDefinition, SkillExecution, SkillInput
+from markwritter.parser import InputParser
+from markwritter.registry import SkillRegistry
 
 
 class TestSkillRegistry:
@@ -216,7 +217,7 @@ class TestLoggingIntegration:
 
     def test_framework_logs_skill_execution(self, caplog: pytest.LogCaptureFixture) -> None:
         """Test that framework logs skill execution."""
-        from markwritter.logger import setup_logging, get_logger
+        from markwritter.logger import setup_logging
 
         setup_logging()
 
@@ -255,7 +256,7 @@ print(f"Hello, {args.name}!")
 
     def test_logs_not_duplicated(self, capsys: pytest.CaptureFixture) -> None:
         """Test that logs are not duplicated after multiple runs."""
-        from markwritter.logger import setup_logging, get_logger
+        from markwritter.logger import get_logger, setup_logging
 
         # Simulate multiple CLI invocations
         setup_logging()

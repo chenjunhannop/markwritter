@@ -8,10 +8,9 @@ RUN pip install --no-cache-dir .
 
 # Copy application code
 COPY markwritter/ ./markwritter/
-COPY api/ ./api/
 COPY skills/ ./skills/
 COPY config.yaml .
 
 EXPOSE 8000
 
-CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "markwritter.api.app:get_app", "--host", "0.0.0.0", "--port", "8000", "--factory"]

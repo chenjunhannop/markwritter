@@ -1,5 +1,5 @@
 """API routes package."""
 
-from markwritter.api.routes import notes, search
+from markwritter.api.routes import chat, logs, notes, search, skills
 
-__all__ = ["notes", "search"]
+__all__ = ["chat", "logs", "notes", "search", "skills"]

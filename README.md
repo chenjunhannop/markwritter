@@ -41,12 +41,12 @@ markwritter/
 │   ├── registry.py       # Skill registry
 │   ├── executor.py       # Skill executor
 │   ├── llm_client.py     # LLM client (LiteLLM)
-│   └── config.py         # Configuration
-├── api/                  # FastAPI REST API
-│   ├── main.py           # API entry point
-│   ├── routers/          # API routers
-│   ├── models/           # Pydantic models
-│   └── services/         # Business logic
+│   ├── config.py         # Configuration
+│   └── api/              # FastAPI REST API
+│       ├── app.py        # API entry point
+│       ├── routes/       # API routes
+│       ├── models/       # Pydantic models
+│       └── services/     # Business logic
 ├── web/                  # Next.js frontend
 │   ├── app/              # App Router pages
 │   ├── components/       # React components
@@ -110,7 +110,7 @@ pnpm dev
 
 ```bash
 # Start FastAPI server
-uvicorn api.main:app --reload
+uvicorn markwritter.api.app:get_app --factory --reload
 
 # API will be available at http://localhost:8000
 # Docs at http://localhost:8000/docs
@@ -177,10 +177,10 @@ pnpm test:e2e
 
 ```bash
 # Format code
-black markwritter/ api/ tests/
+black markwritter/ tests/
 
 # Lint
-ruff check markwritter/ api/ tests/
+ruff check markwritter/ tests/
 ```
 
 ## Documentation

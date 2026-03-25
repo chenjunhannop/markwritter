@@ -3,15 +3,10 @@
 Provides endpoints for knowledge graph functionality.
 """
 
-from typing import Any
-
 from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
 from markwritter.explore.graph import (
-    GraphData,
-    GraphEdge,
-    GraphNode,
     InvalidVaultError,
     KnowledgeGraph,
     NodeNotFoundError,
@@ -168,10 +163,7 @@ async def get_node_graph(note_path: str) -> NodeGraphResponse:
 
     # Get edges (both outgoing and incoming)
     graph = kg.build_graph()
-    edges = [
-        e for e in graph.edges
-        if e.source == note_path or e.target == note_path
-    ]
+    edges = [e for e in graph.edges if e.source == note_path or e.target == note_path]
 
     return NodeGraphResponse(
         node=GraphNodeResponse(

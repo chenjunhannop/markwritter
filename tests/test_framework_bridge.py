@@ -2,7 +2,7 @@
 
 from unittest.mock import MagicMock, patch
 
-from api.services.framework_bridge import get_framework, reset_framework
+from markwritter.api.services.framework_bridge import get_framework, reset_framework
 
 
 class TestFrameworkBridge:
@@ -18,14 +18,14 @@ class TestFrameworkBridge:
 
     def test_get_framework_returns_framework_instance(self):
         """Test that get_framework returns a Framework instance."""
-        with patch("api.services.framework_bridge.SkillRegistry") as mock_registry:
+        with patch("markwritter.api.services.framework_bridge.SkillRegistry") as mock_registry:
             mock_registry.return_value = MagicMock()
             framework = get_framework()
             assert framework is not None
 
     def test_get_framework_returns_singleton(self):
         """Test that get_framework returns the same instance."""
-        with patch("api.services.framework_bridge.SkillRegistry") as mock_registry:
+        with patch("markwritter.api.services.framework_bridge.SkillRegistry") as mock_registry:
             mock_registry.return_value = MagicMock()
             framework1 = get_framework()
             framework2 = get_framework()
@@ -33,7 +33,7 @@ class TestFrameworkBridge:
 
     def test_reset_framework_clears_instance(self):
         """Test that reset_framework clears the cached instance."""
-        with patch("api.services.framework_bridge.SkillRegistry") as mock_registry:
+        with patch("markwritter.api.services.framework_bridge.SkillRegistry") as mock_registry:
             mock_registry.return_value = MagicMock()
             framework1 = get_framework()
             reset_framework()

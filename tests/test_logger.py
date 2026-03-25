@@ -1,9 +1,15 @@
 """Tests for logging system."""
 
+import json
+import logging
+import tempfile
+from datetime import datetime
+from pathlib import Path
+
 import pytest
 from pydantic import ValidationError
 
-from markwritter.models import RotationConfig, OutputConfig, LoggingConfig
+from markwritter.models import LoggingConfig, OutputConfig, RotationConfig
 
 
 class TestRotationConfig:
@@ -51,11 +57,12 @@ class TestOutputConfig:
     def test_file_output_valid(self) -> None:
         """Test valid file output config."""
         from pathlib import Path
+
         config = OutputConfig(
             type="file",
             path=Path("logs/app.log"),
             format="json",
-            rotation=RotationConfig(max_size_mb=10)
+            rotation=RotationConfig(max_size_mb=10),
         )
         assert config.type == "file"
         assert config.path == Path("logs/app.log")
@@ -101,15 +108,12 @@ class TestLoggingConfig:
     def test_production_factory(self) -> None:
         """Test production() factory method."""
         from pathlib import Path
+
         config = LoggingConfig.production(Path("logs"))
         assert len(config.outputs) == 2
         assert config.outputs[0].type == "console"
         assert config.outputs[1].type == "file"
         assert config.outputs[1].rotation is not None
-
-
-import json
-import logging
 
 
 class TestColoredFormatter:
@@ -221,7 +225,6 @@ class TestJsonFormatter:
     def test_timestamp_format(self) -> None:
         """Test that timestamp is in ISO 8601 format."""
         from markwritter.logger import JsonFormatter
-        from datetime import datetime
 
         formatter = JsonFormatter()
         record = logging.LogRecord(
@@ -242,26 +245,24 @@ class TestJsonFormatter:
         assert parsed is not None
 
 
-import tempfile
-from pathlib import Path
-
-
 class TestSetupLogging:
     """Test logging setup."""
 
     def setup_method(self) -> None:
         """Reset logging before each test."""
         from markwritter.logger import reset_logging
+
         reset_logging()
 
     def teardown_method(self) -> None:
         """Reset logging after each test."""
         from markwritter.logger import reset_logging
+
         reset_logging()
 
     def test_minimal_config_console_output(self, capsys: pytest.CaptureFixture) -> None:
         """Test minimal config outputs to console."""
-        from markwritter.logger import setup_logging, get_logger
+        from markwritter.logger import get_logger, setup_logging
 
         config = LoggingConfig.minimal()
         setup_logging(config=config.model_dump())
@@ -274,11 +275,10 @@ class TestSetupLogging:
 
     def test_level_filtering(self, capsys: pytest.CaptureFixture) -> None:
         """Test that messages below threshold are filtered."""
-        from markwritter.logger import setup_logging, get_logger
+        from markwritter.logger import get_logger, setup_logging
 
         config = LoggingConfig(
-            level="WARNING",
-            outputs=[OutputConfig(type="console", format="plain")]
+            level="WARNING", outputs=[OutputConfig(type="console", format="plain")]
         )
         setup_logging(config=config.model_dump())
 
@@ -294,14 +294,12 @@ class TestSetupLogging:
 
     def test_file_output_creates_file(self) -> None:
         """Test that file output creates log file."""
-        from markwritter.logger import setup_logging, get_logger
+        from markwritter.logger import get_logger, setup_logging
 
         with tempfile.TemporaryDirectory() as tmpdir:
             log_path = Path(tmpdir) / "test.log"
             config = LoggingConfig(
-                outputs=[
-                    OutputConfig(type="file", path=log_path, format="json")
-                ]
+                outputs=[OutputConfig(type="file", path=log_path, format="json")]
             )
             setup_logging(config=config.model_dump())
 
@@ -315,7 +313,7 @@ class TestSetupLogging:
 
     def test_multiple_outputs(self, capsys: pytest.CaptureFixture) -> None:
         """Test that multiple outputs work together."""
-        from markwritter.logger import setup_logging, get_logger
+        from markwritter.logger import get_logger, setup_logging
 
         with tempfile.TemporaryDirectory() as tmpdir:
             log_path = Path(tmpdir) / "test.log"
@@ -341,14 +339,12 @@ class TestSetupLogging:
 
     def test_extra_fields_in_json(self) -> None:
         """Test that extra fields appear in JSON output."""
-        from markwritter.logger import setup_logging, get_logger
+        from markwritter.logger import get_logger, setup_logging
 
         with tempfile.TemporaryDirectory() as tmpdir:
             log_path = Path(tmpdir) / "test.log"
             config = LoggingConfig(
-                outputs=[
-                    OutputConfig(type="file", path=log_path, format="json")
-                ]
+                outputs=[OutputConfig(type="file", path=log_path, format="json")]
             )
             setup_logging(config=config.model_dump())
 
@@ -361,7 +357,7 @@ class TestSetupLogging:
 
     def test_get_logger_returns_markwritter_root(self) -> None:
         """Test that get_logger() without name returns root logger."""
-        from markwritter.logger import setup_logging, get_logger
+        from markwritter.logger import get_logger, setup_logging
 
         setup_logging()
         logger = get_logger()
@@ -369,7 +365,7 @@ class TestSetupLogging:
 
     def test_get_logger_with_name(self) -> None:
         """Test that get_logger(name) returns named logger."""
-        from markwritter.logger import setup_logging, get_logger
+        from markwritter.logger import get_logger, setup_logging
 
         setup_logging()
         logger = get_logger("test.module")
@@ -377,7 +373,7 @@ class TestSetupLogging:
 
     def test_prevents_double_initialization(self, capsys: pytest.CaptureFixture) -> None:
         """Test that calling setup_logging twice doesn't add duplicate handlers."""
-        from markwritter.logger import setup_logging, get_logger
+        from markwritter.logger import get_logger, setup_logging
 
         config = LoggingConfig.minimal()
         setup_logging(config=config.model_dump())
@@ -392,7 +388,7 @@ class TestSetupLogging:
 
     def test_force_reload_clears_handlers(self, capsys: pytest.CaptureFixture) -> None:
         """Test that force_reload clears existing handlers."""
-        from markwritter.logger import setup_logging, get_logger
+        from markwritter.logger import get_logger, setup_logging
 
         config = LoggingConfig.minimal()
         setup_logging(config=config.model_dump())
@@ -407,7 +403,7 @@ class TestSetupLogging:
 
     def test_config_path_parameter(self, capsys: pytest.CaptureFixture) -> None:
         """Test that config_path parameter loads config from specified path."""
-        from markwritter.logger import setup_logging, get_logger
+        from markwritter.logger import get_logger, setup_logging
 
         with tempfile.TemporaryDirectory() as tmpdir:
             config_path = Path(tmpdir) / "custom_config.yaml"

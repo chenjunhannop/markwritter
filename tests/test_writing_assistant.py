@@ -3,13 +3,12 @@
 TDD approach: Tests for AI writing assistance before implementation.
 """
 
-from typing import AsyncGenerator, Generator
-from unittest.mock import AsyncMock, MagicMock, patch
+from typing import AsyncGenerator
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from markwritter.llm_client import LLMClient
-
 
 # ==============================================================================
 # Fixtures
@@ -62,7 +61,7 @@ class TestWritingAssistantInit:
 
         with patch("markwritter.llm_client.LLMClient") as mock_client_class:
             mock_client_class.return_value = MagicMock()
-            assistant = WritingAssistant()
+            _ = WritingAssistant()  # noqa: F841
             mock_client_class.assert_called_once()
 
 
@@ -102,7 +101,7 @@ class TestContinueWriting:
 
         assistant = WritingAssistant(llm_client=mock_llm_client)
         content = "# Python Testing\n\nIn this article, we will explore"
-        result = assistant.continue_writing(content)
+        _ = assistant.continue_writing(content)  # noqa: F841
 
         # Should pass content to LLM
         call_args = mock_llm_client.complete.call_args
@@ -114,7 +113,7 @@ class TestContinueWriting:
 
         assistant = WritingAssistant(llm_client=mock_llm_client)
         content = "Start of text"
-        result = assistant.continue_writing(content, max_tokens=100)
+        _ = assistant.continue_writing(content, max_tokens=100)  # noqa: F841
 
         # Should have called complete with max_tokens
         call_kwargs = mock_llm_client.complete.call_args[1]
@@ -170,7 +169,7 @@ class TestRewrite:
 
         # Check that the prompt includes content preservation instructions
         call_args = mock_llm_client.chat_complete.call_args
-        messages = call_args[0][0] if call_args else []
+        _ = call_args[0][0] if call_args else []  # noqa: F841
         # The messages should contain instruction about preserving meaning
 
 
@@ -328,9 +327,8 @@ class TestWritingAssistantEdgeCases:
 
     def test_llm_error_handling(self, mock_llm_client: MagicMock) -> None:
         """Test handling of LLM errors."""
-        from markwritter.record.assistant import WritingAssistant
-
         from markwritter.llm_client import LLMError
+        from markwritter.record.assistant import WritingAssistant
 
         mock_llm_client.complete.side_effect = LLMError("API error")
 

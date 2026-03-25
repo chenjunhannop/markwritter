@@ -12,7 +12,6 @@ from fastapi.testclient import TestClient
 
 from markwritter.api.app import create_app
 
-
 # ==============================================================================
 # Fixtures
 # ==============================================================================
@@ -25,66 +24,56 @@ def explore_vault() -> Generator[Path, None, None]:
         vault_path = Path(tmpdir)
 
         # Central note
-        (vault_path / "central.md").write_text(
-            """---
+        (vault_path / "central.md").write_text("""---
 title: Central Note
 tags: [core, important]
 ---
 # Central Note
 
 Links to [[note-a]], [[note-b]], and [[projects/project-1]].
-"""
-        )
+""")
 
         # Note A
-        (vault_path / "note-a.md").write_text(
-            """---
+        (vault_path / "note-a.md").write_text("""---
 title: Note A
 tags: [reference]
 ---
 # Note A
 
 Links back to [[central]].
-"""
-        )
+""")
 
         # Note B
-        (vault_path / "note-b.md").write_text(
-            """---
+        (vault_path / "note-b.md").write_text("""---
 title: Note B
 tags: [reference]
 ---
 # Note B
 
 Links to [[central]].
-"""
-        )
+""")
 
         # Projects subdirectory
         projects_dir = vault_path / "projects"
         projects_dir.mkdir()
-        (projects_dir / "project-1.md").write_text(
-            """---
+        (projects_dir / "project-1.md").write_text("""---
 title: Project 1
 status: active
 ---
 # Project 1
 
 Related: [[central]]
-"""
-        )
+""")
 
         # Isolated note
-        (vault_path / "isolated.md").write_text(
-            """---
+        (vault_path / "isolated.md").write_text("""---
 title: Isolated Note
 tags: [draft]
 ---
 # Isolated Note
 
 No connections.
-"""
-        )
+""")
 
         yield vault_path
 
@@ -352,9 +341,7 @@ class TestExploreAPIErrors:
 class TestExploreAPIIntegration:
     """Integration tests for Explore API with vault."""
 
-    def test_graph_reflects_vault_changes(
-        self, client: TestClient, explore_vault: Path
-    ) -> None:
+    def test_graph_reflects_vault_changes(self, client: TestClient, explore_vault: Path) -> None:
         """Test that graph reflects changes to vault."""
         # Get initial graph
         response1 = client.get("/api/v1/explore/graph")

@@ -6,14 +6,13 @@ TDD approach: Tests for record API routes before implementation.
 import tempfile
 from pathlib import Path
 from typing import Generator
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 from fastapi.testclient import TestClient
 
 from markwritter.api.app import create_app
 from markwritter.obsidian.vault import ObsidianVault
-
 
 # ==============================================================================
 # Fixtures
@@ -339,9 +338,7 @@ class TestAIAssistAPI:
         assert response.status_code == 200
         assert "text/event-stream" in response.headers.get("content-type", "") or True
 
-    def test_rewrite_endpoint(
-        self, client: TestClient, mock_writing_assistant: MagicMock
-    ) -> None:
+    def test_rewrite_endpoint(self, client: TestClient, mock_writing_assistant: MagicMock) -> None:
         """Test rewrite endpoint."""
         from markwritter.api.routes import record as record_routes
 
@@ -378,9 +375,7 @@ class TestAIAssistAPI:
             )
             assert response.status_code == 200
 
-    def test_polish_endpoint(
-        self, client: TestClient, mock_writing_assistant: MagicMock
-    ) -> None:
+    def test_polish_endpoint(self, client: TestClient, mock_writing_assistant: MagicMock) -> None:
         """Test polish endpoint."""
         from markwritter.api.routes import record as record_routes
 
@@ -420,9 +415,7 @@ class TestAIAssistAPI:
 class TestClassificationAPI:
     """Tests for classification API."""
 
-    def test_classify_endpoint(
-        self, client: TestClient, mock_auto_classifier: MagicMock
-    ) -> None:
+    def test_classify_endpoint(self, client: TestClient, mock_auto_classifier: MagicMock) -> None:
         """Test classify endpoint."""
         from markwritter.api.routes import record as record_routes
 
@@ -580,7 +573,9 @@ class TestRecordAPIErrors:
 class TestPathTraversalSecurity:
     """Tests for path traversal vulnerability prevention."""
 
-    def test_path_traversal_parent_directory(self, client: TestClient, mock_vault: MagicMock) -> None:
+    def test_path_traversal_parent_directory(
+        self, client: TestClient, mock_vault: MagicMock
+    ) -> None:
         """Test path traversal with parent directory reference."""
         from markwritter.api.routes import record as record_routes
 
@@ -595,9 +590,14 @@ class TestPathTraversalSecurity:
         )
 
         assert response.status_code in [400, 403]
-        assert "traversal" in response.json().get("detail", "").lower() or "invalid" in response.json().get("detail", "").lower()
+        assert (
+            "traversal" in response.json().get("detail", "").lower()
+            or "invalid" in response.json().get("detail", "").lower()
+        )
 
-    def test_path_traversal_nested_parent_directory(self, client: TestClient, mock_vault: MagicMock) -> None:
+    def test_path_traversal_nested_parent_directory(
+        self, client: TestClient, mock_vault: MagicMock
+    ) -> None:
         """Test path traversal with nested parent directory references."""
         from markwritter.api.routes import record as record_routes
 
@@ -629,7 +629,9 @@ class TestPathTraversalSecurity:
 
         assert response.status_code in [400, 403]
 
-    def test_path_traversal_windows_absolute_path(self, client: TestClient, mock_vault: MagicMock) -> None:
+    def test_path_traversal_windows_absolute_path(
+        self, client: TestClient, mock_vault: MagicMock
+    ) -> None:
         """Test path traversal with Windows absolute path."""
         from markwritter.api.routes import record as record_routes
 

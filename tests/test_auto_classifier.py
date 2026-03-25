@@ -3,13 +3,11 @@
 TDD approach: Tests for automatic classification before implementation.
 """
 
-from typing import Generator
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from markwritter.llm_client import LLMClient
-
 
 # ==============================================================================
 # Fixtures
@@ -21,9 +19,7 @@ def mock_llm_client() -> MagicMock:
     """Create a mock LLM client."""
     client = MagicMock(spec=LLMClient)
     client.complete = MagicMock(return_value='{"category": "programming", "confidence": 0.9}')
-    client.chat_complete = MagicMock(
-        return_value='{"tags": ["python", "testing", "tdd"]}'
-    )
+    client.chat_complete = MagicMock(return_value='{"tags": ["python", "testing", "tdd"]}')
     return client
 
 
@@ -84,7 +80,7 @@ class TestAutoClassifierInit:
 
         with patch("markwritter.llm_client.LLMClient") as mock_client_class:
             mock_client_class.return_value = MagicMock()
-            classifier = AutoClassifier()
+            _ = AutoClassifier()  # noqa: F841
             mock_client_class.assert_called_once()
 
     def test_init_with_custom_categories(self, mock_llm_client: MagicMock) -> None:
@@ -225,7 +221,7 @@ class TestSuggestTags:
         """Test tag suggestion with empty content."""
         from markwritter.record.assistant import AutoClassifier
 
-        mock_llm_client.complete.return_value = '[]'
+        mock_llm_client.complete.return_value = "[]"
 
         classifier = AutoClassifier(llm_client=mock_llm_client)
         tags = classifier.suggest_tags("")
@@ -279,7 +275,9 @@ class TestSuggestTags:
 class TestSuggestFolder:
     """Tests for suggest_folder method."""
 
-    def test_suggest_folder_basic(self, mock_llm_client: MagicMock, sample_note_content: str) -> None:
+    def test_suggest_folder_basic(
+        self, mock_llm_client: MagicMock, sample_note_content: str
+    ) -> None:
         """Test basic folder suggestion."""
         from markwritter.record.assistant import AutoClassifier
 
@@ -334,7 +332,9 @@ class TestSuggestFolder:
 
         assert folder is not None
 
-    def test_suggest_folder_daily_notes(self, mock_llm_client: MagicMock, sample_daily_note: str) -> None:
+    def test_suggest_folder_daily_notes(
+        self, mock_llm_client: MagicMock, sample_daily_note: str
+    ) -> None:
         """Test folder suggestion for daily notes."""
         from markwritter.record.assistant import AutoClassifier
 
@@ -354,7 +354,9 @@ class TestSuggestFolder:
 class TestSuggestLinks:
     """Tests for suggest_links method."""
 
-    def test_suggest_links_basic(self, mock_llm_client: MagicMock, sample_note_content: str) -> None:
+    def test_suggest_links_basic(
+        self, mock_llm_client: MagicMock, sample_note_content: str
+    ) -> None:
         """Test basic link suggestion."""
         from markwritter.record.assistant import AutoClassifier
 
@@ -372,7 +374,7 @@ class TestSuggestLinks:
         """Test link suggestion with no existing notes."""
         from markwritter.record.assistant import AutoClassifier
 
-        mock_llm_client.complete.return_value = '[]'
+        mock_llm_client.complete.return_value = "[]"
 
         classifier = AutoClassifier(llm_client=mock_llm_client)
         links = classifier.suggest_links("Some content", [])
@@ -463,7 +465,9 @@ class TestAutoClassifierEdgeCases:
         mock_llm_client.complete.return_value = '{"category": "notes", "confidence": 0.85}'
 
         classifier = AutoClassifier(llm_client=mock_llm_client)
-        content = "# Chinese Notes\n\nThis contains Chinese: \u4e2d\u6587\nJapanese: \u65e5\u672c\u8a9e"
+        content = (
+            "# Chinese Notes\n\nThis contains Chinese: \u4e2d\u6587\nJapanese: \u65e5\u672c\u8a9e"
+        )
         result = classifier.classify(content)
 
         assert result is not None

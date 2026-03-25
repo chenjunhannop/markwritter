@@ -13,7 +13,7 @@ These tests verify the full integration between components.
 import tempfile
 from pathlib import Path
 from typing import Generator
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 from fastapi.testclient import TestClient
@@ -25,7 +25,6 @@ from markwritter.record.assistant import (
     ClassifyResult,
     WritingAssistant,
 )
-
 
 # ==============================================================================
 # Fixtures
@@ -67,15 +66,9 @@ def mock_writing_assistant() -> MagicMock:
     """Create a mock WritingAssistant."""
     assistant = MagicMock(spec=WritingAssistant)
 
-    assistant.continue_writing = MagicMock(
-        return_value="This is the continued text from AI."
-    )
-    assistant.rewrite = MagicMock(
-        return_value="This is the rewritten text from AI."
-    )
-    assistant.polish = MagicMock(
-        return_value="This is the polished text from AI."
-    )
+    assistant.continue_writing = MagicMock(return_value="This is the continued text from AI.")
+    assistant.rewrite = MagicMock(return_value="This is the rewritten text from AI.")
+    assistant.polish = MagicMock(return_value="This is the polished text from AI.")
 
     async def mock_continue_stream(*args, **kwargs):
         yield "Continued "
@@ -101,17 +94,11 @@ def mock_auto_classifier() -> MagicMock:
         )
     )
 
-    classifier.suggest_tags = MagicMock(
-        return_value=["python", "programming", "tutorial"]
-    )
+    classifier.suggest_tags = MagicMock(return_value=["python", "programming", "tutorial"])
 
-    classifier.suggest_folder = MagicMock(
-        return_value="programming/python"
-    )
+    classifier.suggest_folder = MagicMock(return_value="programming/python")
 
-    classifier.suggest_links = MagicMock(
-        return_value=["python-reference.md", "existing-note.md"]
-    )
+    classifier.suggest_links = MagicMock(return_value=["python-reference.md", "existing-note.md"])
 
     return classifier
 
@@ -127,6 +114,7 @@ def client(
 
     # Set up vault
     from markwritter.api.routes import record as record_routes
+
     record_routes._vault = ObsidianVault(str(temp_vault))
     record_routes._writing_assistant = mock_writing_assistant
     record_routes._auto_classifier = mock_auto_classifier
@@ -162,9 +150,7 @@ class TestCreateFlowIntegration:
         assert note_path.exists()
         assert "Simple Note" in note_path.read_text()
 
-    def test_create_note_with_frontmatter(
-        self, client: TestClient, temp_vault: Path
-    ) -> None:
+    def test_create_note_with_frontmatter(self, client: TestClient, temp_vault: Path) -> None:
         """Test creating a note with frontmatter."""
         response = client.post(
             "/api/v1/record/create",
@@ -200,9 +186,7 @@ class TestCreateFlowIntegration:
         data = response.json()
         assert data["success"] is True
 
-    def test_create_note_in_subfolder(
-        self, client: TestClient, temp_vault: Path
-    ) -> None:
+    def test_create_note_in_subfolder(self, client: TestClient, temp_vault: Path) -> None:
         """Test creating a note in a subfolder."""
         response = client.post(
             "/api/v1/record/create",
@@ -246,9 +230,7 @@ class TestAIAssistanceIntegration:
     """Integration tests for AI assistance in record flow."""
 
     @pytest.mark.skip(reason="AI continue endpoint not implemented yet")
-    def test_continue_writing(
-        self, client: TestClient, mock_writing_assistant: MagicMock
-    ) -> None:
+    def test_continue_writing(self, client: TestClient, mock_writing_assistant: MagicMock) -> None:
         """Test AI continue writing feature."""
         response = client.post(
             "/api/v1/record/ai/continue",
@@ -278,9 +260,7 @@ class TestAIAssistanceIntegration:
         assert response.status_code == 200
 
     @pytest.mark.skip(reason="AI rewrite endpoint not implemented yet")
-    def test_rewrite_content(
-        self, client: TestClient, mock_writing_assistant: MagicMock
-    ) -> None:
+    def test_rewrite_content(self, client: TestClient, mock_writing_assistant: MagicMock) -> None:
         """Test AI rewrite feature."""
         response = client.post(
             "/api/v1/record/ai/rewrite",
@@ -295,9 +275,7 @@ class TestAIAssistanceIntegration:
         assert "rewritten" in data
 
     @pytest.mark.skip(reason="AI polish endpoint not implemented yet")
-    def test_polish_content(
-        self, client: TestClient, mock_writing_assistant: MagicMock
-    ) -> None:
+    def test_polish_content(self, client: TestClient, mock_writing_assistant: MagicMock) -> None:
         """Test AI polish feature."""
         response = client.post(
             "/api/v1/record/ai/polish",
@@ -314,9 +292,7 @@ class TestAIAssistanceIntegration:
 class TestAutoClassificationIntegration:
     """Integration tests for auto-classification."""
 
-    def test_classify_content(
-        self, client: TestClient, mock_auto_classifier: MagicMock
-    ) -> None:
+    def test_classify_content(self, client: TestClient, mock_auto_classifier: MagicMock) -> None:
         """Test content classification."""
         response = client.post(
             "/api/v1/record/classify",
@@ -331,9 +307,7 @@ class TestAutoClassificationIntegration:
         assert "confidence" in data
 
     @pytest.mark.skip(reason="Tag suggestions endpoint not implemented yet")
-    def test_suggest_tags(
-        self, client: TestClient, mock_auto_classifier: MagicMock
-    ) -> None:
+    def test_suggest_tags(self, client: TestClient, mock_auto_classifier: MagicMock) -> None:
         """Test tag suggestions."""
         response = client.post(
             "/api/v1/record/suggest-tags",
@@ -348,9 +322,7 @@ class TestAutoClassificationIntegration:
         assert isinstance(data["tags"], list)
 
     @pytest.mark.skip(reason="Folder suggestions endpoint not implemented yet")
-    def test_suggest_folder(
-        self, client: TestClient, mock_auto_classifier: MagicMock
-    ) -> None:
+    def test_suggest_folder(self, client: TestClient, mock_auto_classifier: MagicMock) -> None:
         """Test folder suggestions."""
         response = client.post(
             "/api/v1/record/suggest-folder",
@@ -364,9 +336,7 @@ class TestAutoClassificationIntegration:
         assert "folder" in data
 
     @pytest.mark.skip(reason="Link suggestions endpoint not implemented yet")
-    def test_suggest_links(
-        self, client: TestClient, mock_auto_classifier: MagicMock
-    ) -> None:
+    def test_suggest_links(self, client: TestClient, mock_auto_classifier: MagicMock) -> None:
         """Test link suggestions."""
         response = client.post(
             "/api/v1/record/suggest-links",

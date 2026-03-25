@@ -30,8 +30,7 @@ def temp_vault() -> Generator[Path, None, None]:
         vault_path = Path(tmpdir)
 
         # Create sample notes
-        (vault_path / "note1.md").write_text(
-            """---
+        (vault_path / "note1.md").write_text("""---
 title: First Note
 tags: [python, testing]
 created: 2024-01-15
@@ -42,11 +41,9 @@ created: 2024-01-15
 This is the content of the first note.
 
 It links to [[note2]] and [[projects/my-project|My Project]].
-"""
-        )
+""")
 
-        (vault_path / "note2.md").write_text(
-            """---
+        (vault_path / "note2.md").write_text("""---
 title: Second Note
 tags: [python, tutorial]
 ---
@@ -56,15 +53,13 @@ tags: [python, tutorial]
 Content with a tag #python and #testing.
 
 Backlink to [[note1]].
-"""
-        )
+""")
 
         # Create subdirectory with notes
         projects_dir = vault_path / "projects"
         projects_dir.mkdir()
 
-        (projects_dir / "my-project.md").write_text(
-            """---
+        (projects_dir / "my-project.md").write_text("""---
 title: My Project
 status: active
 ---
@@ -74,11 +69,9 @@ status: active
 Project description.
 
 Links: [[note1]], [[note2]]
-"""
-        )
+""")
 
-        (projects_dir / "archive.md").write_text(
-            """---
+        (projects_dir / "archive.md").write_text("""---
 title: Archived Project
 status: archived
 ---
@@ -86,8 +79,7 @@ status: archived
 # Archived Project
 
 Old project.
-"""
-        )
+""")
 
         yield vault_path
 
@@ -299,9 +291,7 @@ class TestNoteParserNoteParsing:
         assert "python" in note.metadata.get("tags", [])
         assert "note2" in note.links
 
-    def test_parse_note_without_frontmatter(
-        self, parser: NoteParser, temp_vault: Path
-    ) -> None:
+    def test_parse_note_without_frontmatter(self, parser: NoteParser, temp_vault: Path) -> None:
         """Test parsing note without frontmatter."""
         # Create note without frontmatter
         (temp_vault / "no-fm.md").write_text("# Plain Note\n\nNo frontmatter.")
@@ -636,8 +626,7 @@ class TestEdgeCases:
     def test_special_characters_in_content(self, temp_vault: Path) -> None:
         """Test handling special characters in note content."""
         special_note = temp_vault / "special.md"
-        special_note.write_text(
-            """---
+        special_note.write_text("""---
 title: Special Characters
 ---
 
@@ -648,8 +637,7 @@ Unicode: cafe, resume, emoji: test
 Code: `x = y` and **bold** and *italic*
 
 Links: [[note with spaces]] and [[日本語]]
-"""
-        )
+""")
 
         vault = ObsidianVault(temp_vault)
         note = vault.read_note("special.md")

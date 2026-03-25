@@ -4,13 +4,11 @@ TDD approach: These tests define the expected behavior before implementation.
 """
 
 from typing import Generator
-from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
 
-from markwritter.api.app import AppSettings, HealthResponse, create_app, get_app
-
+from markwritter.api.app import AppSettings, create_app, get_app
 
 # ==============================================================================
 # Fixtures
@@ -186,9 +184,9 @@ class TestExceptionHandling:
         """Test that exception handlers are registered."""
         # The exception handlers are tested via the actual app behavior.
         # This test verifies the handler registration works.
-        from markwritter.api.app import _register_exception_handlers
-
         from fastapi import FastAPI
+
+        from markwritter.api.app import _register_exception_handlers
 
         app = FastAPI()
         # This should not raise
@@ -235,9 +233,7 @@ class TestApplicationFactory:
 
         assert app1 is app2
 
-    def test_multiple_create_app_instances(
-        self, app_settings: AppSettings
-    ) -> None:
+    def test_multiple_create_app_instances(self, app_settings: AppSettings) -> None:
         """Test that create_app creates different instances."""
         app1 = create_app(app_settings)
         app2 = create_app(app_settings)

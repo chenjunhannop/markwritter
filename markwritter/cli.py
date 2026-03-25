@@ -1,13 +1,11 @@
 """CLI entry point for Markwritter framework."""
 
-from pathlib import Path
 from typing import Optional
 
 import typer
 
-from markwritter.core import Framework
+from markwritter.api.services.framework_bridge import get_framework
 from markwritter.logger import setup_logging
-from markwritter.registry import SkillRegistry
 
 app = typer.Typer(
     name="markwritter",
@@ -15,19 +13,11 @@ app = typer.Typer(
     add_completion=False,
 )
 
-# Global framework instance
-_framework: Optional[Framework] = None
 
-
-def get_framework() -> Framework:
-    """Get or create framework instance."""
-    global _framework
-    if _framework is None:
-        setup_logging()  # Initialize logging
-        skills_dir = Path("./skills").resolve()
-        registry = SkillRegistry(skills_dir)
-        _framework = Framework(registry)
-    return _framework
+@app.callback()
+def main_callback() -> None:
+    """Initialize logging before any command."""
+    setup_logging()
 
 
 @app.command()

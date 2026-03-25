@@ -3,7 +3,7 @@
 import pytest
 
 from markwritter.models import ModelCapability, ModelDefinition, ProviderConfig
-from markwritter.provider_registry import ProviderRegistry, ModelInfo
+from markwritter.provider_registry import ModelInfo, ProviderRegistry
 
 
 class TestModelInfoCreation:
@@ -35,8 +35,7 @@ class TestModelInfoCreation:
     def test_capabilities_list(self) -> None:
         """ModelInfo.capabilities returns list of enabled capabilities."""
         model = ModelDefinition(
-            id="gpt-4o",
-            capabilities=ModelCapability(vision=True, tools=True, streaming=True)
+            id="gpt-4o", capabilities=ModelCapability(vision=True, tools=True, streaming=True)
         )
         info = ModelInfo(provider="openai", model=model)
 
@@ -96,7 +95,7 @@ class TestProviderRegistryGetModelInfo:
                 ModelDefinition(id="gpt-4o", capabilities=ModelCapability(vision=True)),
                 ModelDefinition(id="gpt-4o-mini"),
             ],
-            is_default=True
+            is_default=True,
         )
         registry = ProviderRegistry()
         registry.add_provider(config)
@@ -147,16 +146,10 @@ class TestProviderRegistryGetModelsByCapability:
             provider_type="openai",
             api_key_env="OPENAI_API_KEY",
             models=[
-                ModelDefinition(
-                    id="gpt-4o",
-                    capabilities=ModelCapability(vision=True, tools=True)
-                ),
-                ModelDefinition(
-                    id="gpt-4o-mini",
-                    capabilities=ModelCapability(tools=True)
-                ),
+                ModelDefinition(id="gpt-4o", capabilities=ModelCapability(vision=True, tools=True)),
+                ModelDefinition(id="gpt-4o-mini", capabilities=ModelCapability(tools=True)),
             ],
-            is_default=True
+            is_default=True,
         )
         registry.add_provider(openai)
 
@@ -167,8 +160,7 @@ class TestProviderRegistryGetModelsByCapability:
             api_key_env="ANTHROPIC_API_KEY",
             models=[
                 ModelDefinition(
-                    id="claude-3-5-sonnet",
-                    capabilities=ModelCapability(vision=True, tools=True)
+                    id="claude-3-5-sonnet", capabilities=ModelCapability(vision=True, tools=True)
                 ),
             ],
         )

@@ -13,15 +13,14 @@ These tests verify the full integration between components.
 import tempfile
 from pathlib import Path
 from typing import Generator
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi.testclient import TestClient
 
 from markwritter.api.app import create_app
 from markwritter.obsidian.vault import ObsidianVault
-from markwritter.query.search import KeywordSearch, SearchResult
-
+from markwritter.query.search import KeywordSearch
 
 # ==============================================================================
 # Fixtures
@@ -108,6 +107,7 @@ def temp_db() -> Generator[Path, None, None]:
 def mock_memory_service() -> MagicMock:
     """Create a mock memory service for semantic search."""
     service = MagicMock()
+
     # Make search an async method
     async def mock_search(query: str, top_k: int = 5):
         return [
@@ -124,6 +124,7 @@ def mock_memory_service() -> MagicMock:
                 "user": {"note_path": "testing-guide.md"},
             },
         ]
+
     service.search = mock_search
     return service
 
@@ -160,10 +161,12 @@ def client(
 
     # Set up vault
     from markwritter.api.routes import record as record_routes
+
     record_routes._vault = ObsidianVault(str(temp_vault))
 
     # Set up keyword search
     from markwritter.api.routes import query as query_routes
+
     keyword_search = KeywordSearch(db_path=temp_db)
 
     # Index the test notes
@@ -216,9 +219,7 @@ class TestQueryFlowIntegration:
         # This tests the flow, not the real-time indexing
         assert search_response.status_code == 200
 
-    def test_keyword_search_returns_results(
-        self, client: TestClient
-    ) -> None:
+    def test_keyword_search_returns_results(self, client: TestClient) -> None:
         """Test keyword search returns expected results."""
         response = client.post(
             "/api/v1/query/search",
@@ -266,9 +267,7 @@ class TestQueryFlowIntegration:
         assert "results" in data
 
     @pytest.mark.skip(reason="Q&A endpoint not implemented yet")
-    def test_qa_flow(
-        self, client: TestClient, mock_llm_client: MagicMock
-    ) -> None:
+    def test_qa_flow(self, client: TestClient, mock_llm_client: MagicMock) -> None:
         """Test Q&A flow with context retrieval."""
         response = client.post(
             "/api/v1/query/qa",

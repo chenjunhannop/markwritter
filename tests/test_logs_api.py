@@ -6,16 +6,18 @@ class TestLogsAPI:
 
     def test_logs_stream_route_exists(self):
         """Test GET /api/logs/stream route is registered."""
-        from api.main import app
+        from markwritter.api.app import get_app
 
+        app = get_app()
         # Check that the route is registered
         routes = [route.path for route in app.routes]
         assert "/api/logs/stream" in routes
 
     def test_logs_stream_endpoint_configuration(self):
         """Test that logs stream endpoint is properly configured."""
-        from api.main import app
+        from markwritter.api.app import get_app
 
+        app = get_app()
         # Find the route
         route = None
         for r in app.routes:

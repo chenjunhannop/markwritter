@@ -20,12 +20,8 @@ class NoteParser:
     """
 
     # Regex patterns
-    FRONTMATTER_PATTERN = re.compile(
-        r"^---\s*\n(.*?)\n---\s*\n", re.DOTALL
-    )
-    WIKILINK_PATTERN = re.compile(
-        r"\[\[([^\]|]+)(?:\|[^\]]+)?\]\]"
-    )
+    FRONTMATTER_PATTERN = re.compile(r"^---\s*\n(.*?)\n---\s*\n", re.DOTALL)
+    WIKILINK_PATTERN = re.compile(r"\[\[([^\]|]+)(?:\|[^\]]+)?\]\]")
     TAG_PATTERN = re.compile(r"(?<![^\s])#([\w\-\/]+)")
 
     def __init__(self, vault_path: Path):
@@ -53,7 +49,7 @@ class NoteParser:
             yaml_content = match.group(1)
             data = yaml.safe_load(yaml_content) or {}
             # Calculate where content starts (after frontmatter)
-            content_start = content.count('\n', 0, match.end()) + 1
+            content_start = content.count("\n", 0, match.end()) + 1
             return Frontmatter(data=data, content_start=content_start)
         except yaml.YAMLError:
             return Frontmatter(data={}, content_start=0)
@@ -124,7 +120,7 @@ class NoteParser:
             # Find end of frontmatter in content
             match = self.FRONTMATTER_PATTERN.match(content)
             if match:
-                body_content = content[match.end():]
+                body_content = content[match.end() :]
             else:
                 body_content = content
         else:

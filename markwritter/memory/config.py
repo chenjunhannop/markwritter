@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class MemoryConfig(BaseModel):
-    """Configuration for NoteMemoryService.
+    """Configuration for memory services.
 
     Attributes:
         vault_path: Path to the Obsidian vault

@@ -178,9 +178,7 @@ def _register_exception_handlers(app: FastAPI) -> None:
     """
 
     @app.exception_handler(Exception)
-    async def generic_exception_handler(
-        request: Request, exc: Exception
-    ) -> JSONResponse:
+    async def generic_exception_handler(request: Request, exc: Exception) -> JSONResponse:
         """Handle all unhandled exceptions."""
         logger.error(f"Unhandled exception: {exc}", exc_info=True)
         return JSONResponse(
@@ -201,9 +199,7 @@ def _register_exception_handlers(app: FastAPI) -> None:
         )
 
     @app.exception_handler(FileNotFoundError)
-    async def file_not_found_handler(
-        request: Request, exc: FileNotFoundError
-    ) -> JSONResponse:
+    async def file_not_found_handler(request: Request, exc: FileNotFoundError) -> JSONResponse:
         """Handle FileNotFoundError exceptions."""
         logger.warning(f"FileNotFoundError: {exc}")
         return JSONResponse(
@@ -274,7 +270,7 @@ def _register_routes(app: FastAPI, vault_path: Optional[str] = None) -> None:
         return {"status": "alive"}
 
     # Register additional routers
-    from markwritter.api.routes import explore, notes, query, record, search
+    from markwritter.api.routes import chat, explore, logs, notes, query, record, search, skills
 
     # Configure explore routes with vault path
     if vault_path:
@@ -285,3 +281,8 @@ def _register_routes(app: FastAPI, vault_path: Optional[str] = None) -> None:
     app.include_router(query.router, prefix="/api/v1/query", tags=["Query"])
     app.include_router(record.router, prefix="/api/v1/record", tags=["Record"])
     app.include_router(explore.router, prefix="/api/v1/explore", tags=["Explore"])
+
+    # Register agent framework routes (from legacy api/)
+    app.include_router(skills.router, tags=["Skills"])
+    app.include_router(chat.router, tags=["Chat"])
+    app.include_router(logs.router, tags=["Logs"])

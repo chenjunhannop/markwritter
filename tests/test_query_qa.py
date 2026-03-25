@@ -5,13 +5,12 @@ TDD approach: These tests define the expected behavior before implementation.
 
 import tempfile
 from pathlib import Path
-from typing import AsyncGenerator, Generator
+from typing import Generator
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from markwritter.query.search import AnswerResult, QASystem, SourceReference
-
 
 # ==============================================================================
 # Fixtures
@@ -24,8 +23,7 @@ def temp_vault() -> Generator[Path, None, None]:
     with tempfile.TemporaryDirectory() as tmpdir:
         vault_path = Path(tmpdir)
 
-        (vault_path / "python-testing.md").write_text(
-            """---
+        (vault_path / "python-testing.md").write_text("""---
 title: Python Testing Guide
 tags: [python, testing]
 ---
@@ -34,11 +32,9 @@ tags: [python, testing]
 
 TDD is a development practice where you write tests before code.
 Use pytest for unit testing in Python.
-"""
-        )
+""")
 
-        (vault_path / "fastapi-tutorial.md").write_text(
-            """---
+        (vault_path / "fastapi-tutorial.md").write_text("""---
 title: FastAPI Tutorial
 tags: [python, fastapi]
 ---
@@ -47,8 +43,7 @@ tags: [python, fastapi]
 
 FastAPI is a modern Python web framework.
 It provides automatic API documentation.
-"""
-        )
+""")
 
         yield vault_path
 
@@ -57,16 +52,18 @@ It provides automatic API documentation.
 def mock_memory_service() -> MagicMock:
     """Create a mock memory service."""
     service = MagicMock()
-    service.retrieve = AsyncMock(return_value={
-        "items": [
-            {
-                "id": "item-1",
-                "content": "Python testing guide",
-                "score": 0.95,
-                "user": {"note_path": "python-testing.md"},
-            },
-        ]
-    })
+    service.retrieve = AsyncMock(
+        return_value={
+            "items": [
+                {
+                    "id": "item-1",
+                    "content": "Python testing guide",
+                    "score": 0.95,
+                    "user": {"note_path": "python-testing.md"},
+                },
+            ]
+        }
+    )
     return service
 
 
@@ -74,7 +71,9 @@ def mock_memory_service() -> MagicMock:
 def mock_llm_client() -> MagicMock:
     """Create a mock LLM client."""
     client = MagicMock()
-    client.generate = AsyncMock(return_value="Based on your notes, pytest is recommended for Python testing.")
+    client.generate = AsyncMock(
+        return_value="Based on your notes, pytest is recommended for Python testing."
+    )
     return client
 
 
@@ -122,9 +121,7 @@ class TestQASystemInit:
 
         assert qa.llm_client == mock_llm_client
 
-    def test_init_with_vault(
-        self, mock_memory_service: MagicMock, mock_vault: MagicMock
-    ) -> None:
+    def test_init_with_vault(self, mock_memory_service: MagicMock, mock_vault: MagicMock) -> None:
         """Test initialization with vault."""
         qa = QASystem(
             memory_service=mock_memory_service,
@@ -153,7 +150,7 @@ class TestQASystemAsk:
         )
 
         # Mock the internal _generate_answer method
-        with patch.object(qa, '_generate_answer', new_callable=AsyncMock) as mock_gen:
+        with patch.object(qa, "_generate_answer", new_callable=AsyncMock) as mock_gen:
             mock_gen.return_value = "Test answer"
 
             result = await qa.ask("What is Python testing?")
@@ -171,7 +168,7 @@ class TestQASystemAsk:
             vault=mock_vault,
         )
 
-        with patch.object(qa, '_generate_answer', new_callable=AsyncMock) as mock_gen:
+        with patch.object(qa, "_generate_answer", new_callable=AsyncMock) as mock_gen:
             mock_gen.return_value = "Test answer"
 
             result = await qa.ask("What is Python testing?")
@@ -210,7 +207,7 @@ class TestQASystemAsk:
             {"role": "assistant", "content": "Previous answer"},
         ]
 
-        with patch.object(qa, '_generate_answer', new_callable=AsyncMock) as mock_gen:
+        with patch.object(qa, "_generate_answer", new_callable=AsyncMock) as mock_gen:
             mock_gen.return_value = "Follow-up answer"
 
             result = await qa.ask("Follow-up question", context=context)
@@ -227,7 +224,7 @@ class TestQASystemAsk:
             vault=mock_vault,
         )
 
-        with patch.object(qa, '_generate_answer', new_callable=AsyncMock) as mock_gen:
+        with patch.object(qa, "_generate_answer", new_callable=AsyncMock) as mock_gen:
             mock_gen.return_value = "Answer"
 
             await qa.ask("Question", top_k=10)
@@ -260,10 +257,10 @@ class TestQASystemStreaming:
             yield {"type": "token", "content": " world"}
             yield {"type": "done", "sources": []}
 
-        with patch.object(qa, '_stream_answer', return_value=mock_stream()):
+        with patch.object(qa, "_stream_answer", return_value=mock_stream()):
             result = qa.ask_stream("Question")
 
-            assert hasattr(result, '__aiter__')
+            assert hasattr(result, "__aiter__")
 
     @pytest.mark.asyncio
     async def test_ask_stream_yields_tokens(
@@ -281,7 +278,7 @@ class TestQASystemStreaming:
             yield {"type": "sources", "content": []}
             yield {"type": "done"}
 
-        with patch.object(qa, '_stream_answer', return_value=mock_stream()):
+        with patch.object(qa, "_stream_answer", return_value=mock_stream()):
             chunks = []
             async for chunk in qa.ask_stream("Question"):
                 chunks.append(chunk)
@@ -304,7 +301,7 @@ class TestQASystemStreaming:
             yield {"type": "sources", "content": [{"note_path": "test.md"}]}
             yield {"type": "done"}
 
-        with patch.object(qa, '_stream_answer', return_value=mock_stream()):
+        with patch.object(qa, "_stream_answer", return_value=mock_stream()):
             chunks = []
             async for chunk in qa.ask_stream("Question"):
                 chunks.append(chunk)
@@ -327,7 +324,7 @@ class TestQASystemStreaming:
             yield {"type": "token", "content": "Start"}
             yield {"type": "error", "content": "Something went wrong"}
 
-        with patch.object(qa, '_stream_answer', return_value=mock_stream()):
+        with patch.object(qa, "_stream_answer", return_value=mock_stream()):
             chunks = []
             async for chunk in qa.ask_stream("Question"):
                 chunks.append(chunk)
@@ -355,7 +352,7 @@ class TestQASystemSources:
             vault=mock_vault,
         )
 
-        with patch.object(qa, '_generate_answer', new_callable=AsyncMock) as mock_gen:
+        with patch.object(qa, "_generate_answer", new_callable=AsyncMock) as mock_gen:
             mock_gen.return_value = "Answer"
 
             result = await qa.ask("Question")
@@ -371,11 +368,16 @@ class TestQASystemSources:
         self, mock_memory_service: MagicMock, mock_vault: MagicMock
     ) -> None:
         """Test that sources are limited by top_k."""
+
         # Mock retrieve to respect top_k parameter
         def mock_retrieve(query: str, top_k: int = 5, **kwargs):
             return {
                 "items": [
-                    {"id": f"item-{i}", "score": 0.9 - i * 0.1, "user": {"note_path": f"note{i}.md"}}
+                    {
+                        "id": f"item-{i}",
+                        "score": 0.9 - i * 0.1,
+                        "user": {"note_path": f"note{i}.md"},
+                    }
                     for i in range(min(top_k, 10))  # Respect top_k
                 ]
             }
@@ -387,7 +389,7 @@ class TestQASystemSources:
             vault=mock_vault,
         )
 
-        with patch.object(qa, '_generate_answer', new_callable=AsyncMock) as mock_gen:
+        with patch.object(qa, "_generate_answer", new_callable=AsyncMock) as mock_gen:
             mock_gen.return_value = "Answer"
 
             result = await qa.ask("Question", top_k=3)
@@ -442,7 +444,7 @@ class TestQASystemEdgeCases:
             vault=mock_vault,
         )
 
-        with patch.object(qa, '_generate_answer', new_callable=AsyncMock) as mock_gen:
+        with patch.object(qa, "_generate_answer", new_callable=AsyncMock) as mock_gen:
             mock_gen.return_value = "Unicode answer"
 
             result = await qa.ask("What is cafe resume?")
@@ -474,18 +476,18 @@ class TestQASystemEdgeCases:
         from markwritter.obsidian.vault import NoteNotFoundError
 
         mock_vault.read_note.side_effect = NoteNotFoundError("Not found")
-        mock_memory_service.retrieve = AsyncMock(return_value={
-            "items": [
-                {"id": "item-1", "score": 0.9, "user": {"note_path": "missing.md"}}
-            ]
-        })
+        mock_memory_service.retrieve = AsyncMock(
+            return_value={
+                "items": [{"id": "item-1", "score": 0.9, "user": {"note_path": "missing.md"}}]
+            }
+        )
 
         qa = QASystem(
             memory_service=mock_memory_service,
             vault=mock_vault,
         )
 
-        with patch.object(qa, '_generate_answer', new_callable=AsyncMock) as mock_gen:
+        with patch.object(qa, "_generate_answer", new_callable=AsyncMock) as mock_gen:
             mock_gen.return_value = "Answer"
 
             result = await qa.ask("Question")
@@ -503,7 +505,7 @@ class TestQASystemEdgeCases:
             vault=mock_vault,
         )
 
-        with patch.object(qa, '_generate_answer', new_callable=AsyncMock) as mock_gen:
+        with patch.object(qa, "_generate_answer", new_callable=AsyncMock) as mock_gen:
             mock_gen.return_value = "Code answer"
 
             result = await qa.ask("How do I use `pytest.raises()` in Python?")
@@ -520,7 +522,7 @@ class TestQASystemEdgeCases:
             vault=mock_vault,
         )
 
-        with patch.object(qa, '_generate_answer', new_callable=AsyncMock) as mock_gen:
+        with patch.object(qa, "_generate_answer", new_callable=AsyncMock) as mock_gen:
             mock_gen.return_value = "Multilingual answer"
 
             result = await qa.ask("Python testing")
@@ -551,7 +553,7 @@ class TestQASystemContext:
             {"role": "assistant", "content": "Python testing uses pytest framework."},
         ]
 
-        with patch.object(qa, '_generate_answer', new_callable=AsyncMock) as mock_gen:
+        with patch.object(qa, "_generate_answer", new_callable=AsyncMock) as mock_gen:
             mock_gen.return_value = "Follow-up answer"
 
             await qa.ask("How do I install it?", context=context)
@@ -577,7 +579,7 @@ class TestQASystemContext:
             {"role": "assistant", "content": "A" * 1000},
         ] * 10  # 20 messages
 
-        with patch.object(qa, '_generate_answer', new_callable=AsyncMock) as mock_gen:
+        with patch.object(qa, "_generate_answer", new_callable=AsyncMock) as mock_gen:
             mock_gen.return_value = "Answer"
 
             await qa.ask("Question", context=long_context)
@@ -604,7 +606,7 @@ class TestQASystemIntegration:
             vault=mock_vault,
         )
 
-        with patch.object(qa, '_generate_answer', new_callable=AsyncMock) as mock_gen:
+        with patch.object(qa, "_generate_answer", new_callable=AsyncMock) as mock_gen:
             mock_gen.return_value = "Complete answer"
 
             # Ask question
@@ -632,7 +634,7 @@ class TestQASystemIntegration:
             yield {"type": "sources", "content": []}
             yield {"type": "done"}
 
-        with patch.object(qa, '_stream_answer', return_value=mock_stream()):
+        with patch.object(qa, "_stream_answer", return_value=mock_stream()):
             # Stream question
             full_answer = ""
             async for chunk in qa.ask_stream("Question"):

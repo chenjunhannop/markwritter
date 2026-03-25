@@ -1,10 +1,8 @@
-"""Memory service integration with memU.
+"""Memory configuration module.
 
-This module provides NoteMemoryService for indexing and searching Obsidian notes
-using memU's semantic memory capabilities.
+This module provides MemoryConfig for configuring memory services.
 """
 
-from markwritter.memory.service import NoteMemoryService
 from markwritter.memory.config import MemoryConfig
 
-__all__ = ["NoteMemoryService", "MemoryConfig"]
+__all__ = ["MemoryConfig"]

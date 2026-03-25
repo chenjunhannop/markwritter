@@ -6,20 +6,15 @@ TDD approach: Tests for API routes before implementation.
 import tempfile
 from pathlib import Path
 from typing import Generator
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi.testclient import TestClient
 
 from markwritter.api.app import create_app
 from markwritter.query.search import (
-    AnswerResult,
-    HighlightResult,
     KeywordSearch,
-    SearchResult,
-    SourceReference,
 )
-
 
 # ==============================================================================
 # Fixtures
@@ -59,16 +54,18 @@ def mock_keyword_search(temp_db: Path) -> KeywordSearch:
 def mock_memory_service() -> MagicMock:
     """Create a mock memory service."""
     service = MagicMock()
-    service.retrieve = AsyncMock(return_value={
-        "items": [
-            {
-                "id": "item-1",
-                "content": "Python testing guide",
-                "score": 0.95,
-                "user": {"note_path": "python-testing.md"},
-            },
-        ]
-    })
+    service.retrieve = AsyncMock(
+        return_value={
+            "items": [
+                {
+                    "id": "item-1",
+                    "content": "Python testing guide",
+                    "score": 0.95,
+                    "user": {"note_path": "python-testing.md"},
+                },
+            ]
+        }
+    )
     return service
 
 
@@ -97,7 +94,11 @@ def client(mock_keyword_search: KeywordSearch) -> Generator[TestClient, None, No
     from markwritter.api.routes import query as query_routes
 
     # Store original state
-    original_state = query_routes._keyword_search, query_routes._semantic_search, query_routes._qa_system
+    original_state = (
+        query_routes._keyword_search,
+        query_routes._semantic_search,
+        query_routes._qa_system,
+    )
 
     # Set mock state
     query_routes._keyword_search = mock_keyword_search
@@ -105,7 +106,9 @@ def client(mock_keyword_search: KeywordSearch) -> Generator[TestClient, None, No
     yield TestClient(app)
 
     # Restore original state
-    query_routes._keyword_search, query_routes._semantic_search, query_routes._qa_system = original_state
+    query_routes._keyword_search, query_routes._semantic_search, query_routes._qa_system = (
+        original_state
+    )
 
 
 # ==============================================================================
@@ -361,7 +364,10 @@ class TestStreamingAPI:
         )
 
         # Should be SSE or streaming response
-        assert "text/event-stream" in response.headers.get("content-type", "") or response.status_code == 200
+        assert (
+            "text/event-stream" in response.headers.get("content-type", "")
+            or response.status_code == 200
+        )
 
 
 # ==============================================================================

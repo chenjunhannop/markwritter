@@ -92,8 +92,7 @@ def graph_vault() -> Generator[Path, None, None]:
         vault_path = Path(tmpdir)
 
         # Central note with many connections
-        (vault_path / "central.md").write_text(
-            """---
+        (vault_path / "central.md").write_text("""---
 title: Central Note
 tags: [core, important]
 ---
@@ -106,12 +105,10 @@ Links to:
 - [[note-b]]
 - [[projects/project-1|Project 1]]
 - [[concepts/design]]
-"""
-        )
+""")
 
         # Note A
-        (vault_path / "note-a.md").write_text(
-            """---
+        (vault_path / "note-a.md").write_text("""---
 title: Note A
 tags: [reference]
 ---
@@ -120,27 +117,23 @@ tags: [reference]
 Links back to [[central]].
 
 Also links to [[note-b]].
-"""
-        )
+""")
 
         # Note B
-        (vault_path / "note-b.md").write_text(
-            """---
+        (vault_path / "note-b.md").write_text("""---
 title: Note B
 tags: [reference]
 ---
 # Note B
 
 Links to [[central]] and [[note-a]].
-"""
-        )
+""")
 
         # Projects subdirectory
         projects_dir = vault_path / "projects"
         projects_dir.mkdir()
 
-        (projects_dir / "project-1.md").write_text(
-            """---
+        (projects_dir / "project-1.md").write_text("""---
 title: Project 1
 status: active
 ---
@@ -149,15 +142,13 @@ status: active
 Main project note.
 
 Related: [[central]], [[concepts/design]]
-"""
-        )
+""")
 
         # Concepts subdirectory
         concepts_dir = vault_path / "concepts"
         concepts_dir.mkdir()
 
-        (concepts_dir / "design.md").write_text(
-            """---
+        (concepts_dir / "design.md").write_text("""---
 title: Design Concepts
 tags: [design, architecture]
 ---
@@ -166,20 +157,17 @@ tags: [design, architecture]
 Core design principles.
 
 Referenced by [[central]] and [[projects/project-1]].
-"""
-        )
+""")
 
         # Isolated note (no connections)
-        (vault_path / "isolated.md").write_text(
-            """---
+        (vault_path / "isolated.md").write_text("""---
 title: Isolated Note
 tags: [draft]
 ---
 # Isolated Note
 
 This note has no connections.
-"""
-        )
+""")
 
         yield vault_path
 
@@ -550,8 +538,7 @@ class TestKnowledgeGraphEdgeCases:
 
     def test_unicode_in_notes(self, tmp_path: Path) -> None:
         """Test handling unicode in note content."""
-        (tmp_path / "unicode.md").write_text(
-            """---
+        (tmp_path / "unicode.md").write_text("""---
 title: Unicode Test
 tags: [emoji, i18n]
 ---
@@ -560,8 +547,7 @@ tags: [emoji, i18n]
 Content with emoji: content
 
 Links: [[日本語]], [[emoji-world]]
-"""
-        )
+""")
 
         from markwritter.explore.graph import KnowledgeGraph
 

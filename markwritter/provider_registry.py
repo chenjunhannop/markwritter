@@ -222,13 +222,8 @@ class ProviderRegistry:
             List of model IDs.
         """
         if include_provider:
-            return [
-                key for key in self._model_index.keys()
-                if "/" in key
-            ]
-        return [
-            model.id for _, model in self._model_index.values()
-        ]
+            return [key for key in self._model_index.keys() if "/" in key]
+        return [model.id for _, model in self._model_index.values()]
 
     def get_api_key(self, provider_name: str) -> Optional[str]:
         """Get API key for a provider from environment variable.
@@ -288,8 +283,7 @@ class ProviderRegistry:
         valid_capabilities = {"vision", "tools", "streaming"}
         if capability not in valid_capabilities:
             raise ValueError(
-                f"Invalid capability: {capability}. "
-                f"Valid capabilities: {valid_capabilities}"
+                f"Invalid capability: {capability}. " f"Valid capabilities: {valid_capabilities}"
             )
 
         capabilities = self.get_model_capabilities(model_id)

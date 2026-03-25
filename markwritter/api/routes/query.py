@@ -325,10 +325,9 @@ async def ask_question_stream(request: AskStreamRequest) -> StreamingResponse:
         Streaming response with tokens and sources
     """
     if not _qa_system:
+
         async def error_stream():
-            error_msg = json.dumps(
-                {"type": "error", "content": "Q&A system not initialized"}
-            )
+            error_msg = json.dumps({"type": "error", "content": "Q&A system not initialized"})
             yield f"data: {error_msg}\n\n"
 
         return StreamingResponse(

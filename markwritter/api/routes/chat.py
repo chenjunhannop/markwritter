@@ -5,8 +5,8 @@ import json
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 
-from api.models.chat import ChatEvent, ChatRequest
-from api.services.framework_bridge import get_framework
+from markwritter.api.models.chat import ChatEvent, ChatRequest
+from markwritter.api.services.framework_bridge import get_framework
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 

@@ -175,7 +175,9 @@ class KnowledgeGraph:
             note_paths[stem] = rel_path
 
         # Track connections for each node
-        connections: dict[str, set[str]] = {rel: set() for rel in note_paths.values() if rel.endswith(".md")}
+        connections: dict[str, set[str]] = {
+            rel: set() for rel in note_paths.values() if rel.endswith(".md")
+        }
 
         nodes: list[GraphNode] = []
         edges: list[GraphEdge] = []
