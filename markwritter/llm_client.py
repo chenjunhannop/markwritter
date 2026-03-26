@@ -155,7 +155,6 @@ class LLMClient:
             registry: Optional provider registry for model resolution and capability selection.
         """
         self.config = config or get_config().llm
-        self.registry = registry
         self.cache: Optional[MemoryCache] = None
 
         # Initialize cache if enabled
@@ -165,6 +164,17 @@ class LLMClient:
                 max_size=cache_config.max_size,
                 ttl_seconds=cache_config.ttl_seconds,
             )
+
+        # Initialize registry if not provided
+        if registry is not None:
+            self.registry = registry
+        else:
+            # Auto-create ProviderRegistry from config
+            from markwritter.provider_registry import (
+                ProviderRegistry as ConcreteProviderRegistry,
+            )
+
+            self.registry = ConcreteProviderRegistry(self.config)
 
     def _generate_cache_key(self, prompt: str, model: str) -> str:
         """Generate cache key from prompt and model."""

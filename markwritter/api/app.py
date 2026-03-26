@@ -283,6 +283,13 @@ def _register_routes(app: FastAPI, vault_path: Optional[str] = None) -> None:
     app.include_router(explore.router, prefix="/api/v1/explore", tags=["Explore"])
 
     # Register agent framework routes (from legacy api/)
-    app.include_router(skills.router, tags=["Skills"])
-    app.include_router(chat.router, tags=["Chat"])
-    app.include_router(logs.router, tags=["Logs"])
+    # Phase 2.2: Add /api/v1 prefix for consistency
+    app.include_router(skills.router, prefix="/api/v1", tags=["Skills"])
+    app.include_router(chat.router, prefix="/api/v1", tags=["Chat"])
+    app.include_router(logs.router, prefix="/api/v1", tags=["Logs"])
+
+    # Phase 2.2: Backward compatibility - keep old /api/* paths working
+    # These routes are deprecated and will be removed in a future version
+    app.include_router(skills.router, prefix="/api", tags=["Skills (Deprecated)"])
+    app.include_router(chat.router, prefix="/api", tags=["Chat (Deprecated)"])
+    app.include_router(logs.router, prefix="/api", tags=["Logs (Deprecated)"])

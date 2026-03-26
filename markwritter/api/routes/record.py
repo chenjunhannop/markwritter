@@ -1,15 +1,25 @@
 """Record API routes.
 
 Provides endpoints for note creation, update, and AI assistance.
+
+Phase 2.1: RESTful Endpoint Refactoring
+- POST /notes - Create a new note (returns 201)
+- PUT /notes/{note_path} - Update an existing note
+- Old endpoints preserved for backward compatibility with deprecation warnings
+
+Phase 3.4: Dependency Injection
+- Uses FastAPI Depends() for dependency injection
+- Backward compatible with init_record_routes() for global state
 """
 
 from __future__ import annotations
 
 import json
 import logging
+import warnings
 from typing import Any, Optional
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
@@ -20,9 +30,46 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 # Global instances (set by dependency injection or initialization)
+# These are kept for backward compatibility with init_record_routes()
 _vault: Optional[Any] = None  # ObsidianVault
 _writing_assistant: Optional[WritingAssistant] = None
 _auto_classifier: Optional[AutoClassifier] = None
+
+# Deprecation message for old endpoints
+DEPRECATION_MESSAGE = "This endpoint is deprecated. Use POST /api/v1/notes instead."
+DEPRECATION_UPDATE_MESSAGE = "This endpoint is deprecated. Use PUT /api/v1/notes/{note_path} instead."
+
+
+# ==============================================================================
+# Dependency Injection Functions
+# ==============================================================================
+
+
+def get_vault() -> Optional[Any]:
+    """Get the vault instance.
+
+    Returns:
+        ObsidianVault instance or None if not configured.
+    """
+    return _vault
+
+
+def get_writing_assistant() -> Optional[WritingAssistant]:
+    """Get the writing assistant instance.
+
+    Returns:
+        WritingAssistant instance or None if not configured.
+    """
+    return _writing_assistant
+
+
+def get_auto_classifier() -> Optional[AutoClassifier]:
+    """Get the auto classifier instance.
+
+    Returns:
+        AutoClassifier instance or None if not configured.
+    """
+    return _auto_classifier
 
 
 def init_record_routes(
@@ -31,6 +78,9 @@ def init_record_routes(
     auto_classifier: Optional[AutoClassifier] = None,
 ) -> None:
     """Initialize record routes with dependencies.
+
+    This function is kept for backward compatibility.
+    New code should use dependency injection via FastAPI's dependency_overrides.
 
     Args:
         vault: ObsidianVault instance
@@ -68,7 +118,7 @@ class CreateNoteResponse(BaseModel):
 class UpdateNoteRequest(BaseModel):
     """Request model for updating a note."""
 
-    path: str = Field(..., description="Relative path for the note")
+    path: str = Field(default="", description="Relative path for the note (ignored in new endpoint)")
     content: str = Field(..., description="Note content")
     metadata: Optional[dict[str, Any]] = Field(default=None, description="Note metadata")
     mode: str = Field(default="replace", description="Update mode: replace, append, prepend")
@@ -181,141 +231,8 @@ class SuggestLinksResponse(BaseModel):
 
 
 # ==============================================================================
-# Create/Update Note Endpoints
+# Helper Functions
 # ==============================================================================
-
-
-@router.post(
-    "/create",
-    response_model=CreateNoteResponse,
-    summary="Create a new note",
-    description="Create a new note in the vault",
-)
-async def create_note(request: CreateNoteRequest) -> CreateNoteResponse:
-    """Create a new note.
-
-    Args:
-        request: Note creation request
-
-    Returns:
-        Creation result
-    """
-    if not _vault:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Vault not configured",
-        )
-
-    # Validate path (prevent path traversal)
-    if not _is_safe_path(request.path):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid path: path traversal not allowed",
-        )
-
-    # Check if note exists
-    if _vault.note_exists(request.path) and not request.overwrite:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"Note already exists: {request.path}. Use overwrite=true to replace.",
-        )
-
-    try:
-        from markwritter.obsidian.models import Note
-
-        note = Note(
-            path=request.path,
-            content=request.content,
-            metadata=request.metadata or {},
-        )
-        _vault.write_note(note, overwrite=request.overwrite)
-
-        return CreateNoteResponse(
-            success=True,
-            path=request.path,
-            message="Note created successfully",
-        )
-    except Exception as e:
-        logger.error(f"Error creating note: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e),
-        )
-
-
-@router.put(
-    "/update",
-    response_model=UpdateNoteResponse,
-    summary="Update an existing note",
-    description="Update an existing note in the vault",
-)
-async def update_note(request: UpdateNoteRequest) -> UpdateNoteResponse:
-    """Update an existing note.
-
-    Args:
-        request: Note update request
-
-    Returns:
-        Update result
-    """
-    if not _vault:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Vault not configured",
-        )
-
-    # Validate path
-    if not _is_safe_path(request.path):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid path: path traversal not allowed",
-        )
-
-    # Check if note exists
-    if not _vault.note_exists(request.path):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Note not found: {request.path}",
-        )
-
-    try:
-        from markwritter.obsidian.models import Note
-
-        # Handle different update modes
-        if request.mode == "append":
-            existing = _vault.read_note(request.path)
-            new_content = existing.content + "\n\n" + request.content
-        elif request.mode == "prepend":
-            existing = _vault.read_note(request.path)
-            new_content = request.content + "\n\n" + existing.content
-        else:  # replace
-            new_content = request.content
-
-        # Merge metadata
-        if request.metadata:
-            existing = _vault.read_note(request.path)
-            merged_metadata = {**existing.metadata, **request.metadata}
-        else:
-            merged_metadata = request.metadata or {}
-
-        note = Note(
-            path=request.path,
-            content=new_content,
-            metadata=merged_metadata,
-        )
-        _vault.write_note(note, overwrite=True)
-
-        return UpdateNoteResponse(
-            success=True,
-            path=request.path,
-            message="Note updated successfully",
-        )
-    except Exception as e:
-        logger.error(f"Error updating note: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e),
-        )
 
 
 def _is_safe_path(path: str) -> bool:
@@ -395,6 +312,202 @@ def _is_safe_path(path: str) -> bool:
     return True
 
 
+def _add_deprecation_header(response: Response, message: str) -> Response:
+    """Add deprecation warning header to response.
+
+    Args:
+        response: FastAPI response object
+        message: Deprecation message
+
+    Returns:
+        Response with deprecation headers
+    """
+    response.headers["Deprecation"] = "true"
+    response.headers["Warning"] = message
+    return response
+
+
+# ==============================================================================
+# Deprecated Create Note Endpoint (Backward Compatibility)
+# ==============================================================================
+
+
+@router.post(
+    "/create",
+    response_model=CreateNoteResponse,
+    summary="Create a new note (DEPRECATED)",
+    description="DEPRECATED: Use POST /api/v1/notes instead. Create a new note in the vault",
+    deprecated=True,
+)
+async def create_note(
+    request: CreateNoteRequest,
+    response: Response,
+    vault: Optional[Any] = Depends(get_vault),
+) -> CreateNoteResponse:
+    """Create a new note (deprecated endpoint).
+
+    This endpoint is deprecated. Use POST /api/v1/notes instead.
+
+    Args:
+        request: Note creation request
+        response: FastAPI response object
+        vault: Injected ObsidianVault instance
+
+    Returns:
+        Creation result
+    """
+    # Issue deprecation warning
+    warnings.warn(
+        DEPRECATION_MESSAGE,
+        DeprecationWarning,
+        stacklevel=2,
+    )
+
+    if not vault:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Vault not configured",
+        )
+
+    # Validate path (prevent path traversal)
+    if not _is_safe_path(request.path):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid path: path traversal not allowed",
+        )
+
+    # Check if note exists
+    if vault.note_exists(request.path) and not request.overwrite:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Note already exists: {request.path}. Use overwrite=true to replace.",
+        )
+
+    try:
+        from markwritter.obsidian.models import Note
+
+        note = Note(
+            path=request.path,
+            content=request.content,
+            metadata=request.metadata or {},
+        )
+        vault.write_note(note, overwrite=request.overwrite)
+
+        # Add deprecation header
+        _add_deprecation_header(response, DEPRECATION_MESSAGE)
+
+        return CreateNoteResponse(
+            success=True,
+            path=request.path,
+            message="Note created successfully",
+        )
+    except Exception as e:
+        logger.error(f"Error creating note: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
+
+
+# ==============================================================================
+# Deprecated Update Note Endpoint (Backward Compatibility)
+# ==============================================================================
+
+
+@router.put(
+    "/update",
+    response_model=UpdateNoteResponse,
+    summary="Update an existing note (DEPRECATED)",
+    description="DEPRECATED: Use PUT /api/v1/notes/{note_path} instead. Update an existing note in the vault",
+    deprecated=True,
+)
+async def update_note(
+    request: UpdateNoteRequest,
+    response: Response,
+    vault: Optional[Any] = Depends(get_vault),
+) -> UpdateNoteResponse:
+    """Update an existing note (deprecated endpoint).
+
+    This endpoint is deprecated. Use PUT /api/v1/notes/{note_path} instead.
+
+    Args:
+        request: Note update request
+        response: FastAPI response object
+        vault: Injected ObsidianVault instance
+
+    Returns:
+        Update result
+    """
+    # Issue deprecation warning
+    warnings.warn(
+        DEPRECATION_UPDATE_MESSAGE,
+        DeprecationWarning,
+        stacklevel=2,
+    )
+
+    if not vault:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Vault not configured",
+        )
+
+    # Validate path
+    if not _is_safe_path(request.path):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid path: path traversal not allowed",
+        )
+
+    # Check if note exists
+    if not vault.note_exists(request.path):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Note not found: {request.path}",
+        )
+
+    try:
+        from markwritter.obsidian.models import Note
+
+        # Handle different update modes
+        if request.mode == "append":
+            existing = vault.read_note(request.path)
+            new_content = existing.content + "\n\n" + request.content
+        elif request.mode == "prepend":
+            existing = vault.read_note(request.path)
+            new_content = request.content + "\n\n" + existing.content
+        else:  # replace
+            new_content = request.content
+
+        # Merge metadata
+        if request.metadata:
+            existing = vault.read_note(request.path)
+            merged_metadata = {**existing.metadata, **request.metadata}
+        else:
+            merged_metadata = request.metadata or {}
+
+        note = Note(
+            path=request.path,
+            content=new_content,
+            metadata=merged_metadata,
+        )
+        vault.write_note(note, overwrite=True)
+
+        # Add deprecation header
+        _add_deprecation_header(response, DEPRECATION_UPDATE_MESSAGE)
+
+        return UpdateNoteResponse(
+            success=True,
+            path=request.path,
+            message="Note updated successfully",
+        )
+    except Exception as e:
+        logger.error(f"Error updating note: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
+
+
 # ==============================================================================
 # AI Assistance Endpoints
 # ==============================================================================
@@ -406,23 +519,27 @@ def _is_safe_path(path: str) -> bool:
     summary="Continue writing",
     description="Generate a continuation of the provided text",
 )
-async def continue_writing(request: ContinueWritingRequest) -> ContinueWritingResponse:
+async def continue_writing(
+    request: ContinueWritingRequest,
+    writing_assistant: Optional[WritingAssistant] = Depends(get_writing_assistant),
+) -> ContinueWritingResponse:
     """Continue writing from given content.
 
     Args:
         request: Continue writing request
+        writing_assistant: Injected WritingAssistant instance
 
     Returns:
         Continuation text
     """
-    if not _writing_assistant:
+    if not writing_assistant:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Writing assistant not configured",
         )
 
     try:
-        continuation = _writing_assistant.continue_writing(
+        continuation = writing_assistant.continue_writing(
             content=request.content,
             max_tokens=request.max_tokens,
         )
@@ -444,16 +561,20 @@ async def continue_writing(request: ContinueWritingRequest) -> ContinueWritingRe
     summary="Continue writing with streaming",
     description="Generate a continuation with streaming output",
 )
-async def continue_writing_stream(request: ContinueWritingRequest) -> StreamingResponse:
+async def continue_writing_stream(
+    request: ContinueWritingRequest,
+    writing_assistant: Optional[WritingAssistant] = Depends(get_writing_assistant),
+) -> StreamingResponse:
     """Continue writing with streaming output.
 
     Args:
         request: Continue writing request
+        writing_assistant: Injected WritingAssistant instance
 
     Returns:
         Streaming response
     """
-    if not _writing_assistant:
+    if not writing_assistant:
 
         async def error_stream():
             yield f"data: {json.dumps({'error': 'Writing assistant not configured'})}\n\n"
@@ -465,7 +586,7 @@ async def continue_writing_stream(request: ContinueWritingRequest) -> StreamingR
 
     async def generate_stream():
         try:
-            async for chunk in _writing_assistant.continue_writing_stream(
+            async for chunk in writing_assistant.continue_writing_stream(
                 content=request.content,
                 max_tokens=request.max_tokens,
             ):
@@ -486,23 +607,27 @@ async def continue_writing_stream(request: ContinueWritingRequest) -> StreamingR
     summary="Rewrite text",
     description="Rewrite text in a different style",
 )
-async def rewrite(request: RewriteRequest) -> RewriteResponse:
+async def rewrite(
+    request: RewriteRequest,
+    writing_assistant: Optional[WritingAssistant] = Depends(get_writing_assistant),
+) -> RewriteResponse:
     """Rewrite content in a different style.
 
     Args:
         request: Rewrite request
+        writing_assistant: Injected WritingAssistant instance
 
     Returns:
         Rewritten text
     """
-    if not _writing_assistant:
+    if not writing_assistant:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Writing assistant not configured",
         )
 
     try:
-        rewritten = _writing_assistant.rewrite(
+        rewritten = writing_assistant.rewrite(
             content=request.content,
             style=request.style,
             max_tokens=request.max_tokens,
@@ -526,23 +651,27 @@ async def rewrite(request: RewriteRequest) -> RewriteResponse:
     summary="Polish text",
     description="Improve grammar, clarity, and flow",
 )
-async def polish(request: PolishRequest) -> PolishResponse:
+async def polish(
+    request: PolishRequest,
+    writing_assistant: Optional[WritingAssistant] = Depends(get_writing_assistant),
+) -> PolishResponse:
     """Polish content for better quality.
 
     Args:
         request: Polish request
+        writing_assistant: Injected WritingAssistant instance
 
     Returns:
         Polished text
     """
-    if not _writing_assistant:
+    if not writing_assistant:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Writing assistant not configured",
         )
 
     try:
-        polished = _writing_assistant.polish(
+        polished = writing_assistant.polish(
             content=request.content,
             max_tokens=request.max_tokens,
         )
@@ -567,23 +696,27 @@ async def polish(request: PolishRequest) -> PolishResponse:
     summary="Classify content",
     description="Automatically classify content into a category",
 )
-async def classify(request: ClassifyRequest) -> ClassifyResponse:
+async def classify(
+    request: ClassifyRequest,
+    auto_classifier: Optional[AutoClassifier] = Depends(get_auto_classifier),
+) -> ClassifyResponse:
     """Classify content into a category.
 
     Args:
         request: Classification request
+        auto_classifier: Injected AutoClassifier instance
 
     Returns:
         Classification result
     """
-    if not _auto_classifier:
+    if not auto_classifier:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Auto classifier not configured",
         )
 
     try:
-        result = _auto_classifier.classify(
+        result = auto_classifier.classify(
             content=request.content,
             metadata=request.metadata,
         )
@@ -607,23 +740,27 @@ async def classify(request: ClassifyRequest) -> ClassifyResponse:
     summary="Suggest tags",
     description="Suggest relevant tags for content",
 )
-async def suggest_tags(request: SuggestTagsRequest) -> SuggestTagsResponse:
+async def suggest_tags(
+    request: SuggestTagsRequest,
+    auto_classifier: Optional[AutoClassifier] = Depends(get_auto_classifier),
+) -> SuggestTagsResponse:
     """Suggest tags for content.
 
     Args:
         request: Tag suggestion request
+        auto_classifier: Injected AutoClassifier instance
 
     Returns:
         Suggested tags
     """
-    if not _auto_classifier:
+    if not auto_classifier:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Auto classifier not configured",
         )
 
     try:
-        tags = _auto_classifier.suggest_tags(
+        tags = auto_classifier.suggest_tags(
             content=request.content,
             existing_tags=request.existing_tags,
             max_tags=request.max_tags,
@@ -644,23 +781,27 @@ async def suggest_tags(request: SuggestTagsRequest) -> SuggestTagsResponse:
     summary="Suggest folder",
     description="Suggest a folder path for the note",
 )
-async def suggest_folder(request: SuggestFolderRequest) -> SuggestFolderResponse:
+async def suggest_folder(
+    request: SuggestFolderRequest,
+    auto_classifier: Optional[AutoClassifier] = Depends(get_auto_classifier),
+) -> SuggestFolderResponse:
     """Suggest a folder for the note.
 
     Args:
         request: Folder suggestion request
+        auto_classifier: Injected AutoClassifier instance
 
     Returns:
         Suggested folder
     """
-    if not _auto_classifier:
+    if not auto_classifier:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Auto classifier not configured",
         )
 
     try:
-        folder = _auto_classifier.suggest_folder(
+        folder = auto_classifier.suggest_folder(
             content=request.content,
             existing_folders=request.existing_folders,
         )
@@ -680,23 +821,27 @@ async def suggest_folder(request: SuggestFolderRequest) -> SuggestFolderResponse
     summary="Suggest related notes",
     description="Suggest related notes to link to",
 )
-async def suggest_links(request: SuggestLinksRequest) -> SuggestLinksResponse:
+async def suggest_links(
+    request: SuggestLinksRequest,
+    auto_classifier: Optional[AutoClassifier] = Depends(get_auto_classifier),
+) -> SuggestLinksResponse:
     """Suggest related notes to link to.
 
     Args:
         request: Link suggestion request
+        auto_classifier: Injected AutoClassifier instance
 
     Returns:
         Suggested links
     """
-    if not _auto_classifier:
+    if not auto_classifier:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Auto classifier not configured",
         )
 
     try:
-        links = _auto_classifier.suggest_links(
+        links = auto_classifier.suggest_links(
             content=request.content,
             existing_notes=request.existing_notes,
             max_links=request.max_links,

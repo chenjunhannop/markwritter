@@ -14,20 +14,9 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
+from markwritter.exceptions import InvalidVaultError, NodeNotFoundError
 from markwritter.obsidian.models import NoteMeta
 from markwritter.obsidian.parser import NoteParser
-
-
-class InvalidVaultError(Exception):
-    """Raised when vault path is invalid."""
-
-    pass
-
-
-class NodeNotFoundError(Exception):
-    """Raised when a node cannot be found."""
-
-    pass
 
 
 class GraphNode(BaseModel):

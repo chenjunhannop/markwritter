@@ -1,9 +1,13 @@
 """Subagent executor for running skills."""
 
 import asyncio
+import logging
+import warnings
 from pathlib import Path
 
 from markwritter.models import ExecutionResult, SkillDefinition
+
+logger = logging.getLogger(__name__)
 
 
 class SkillExecutor:
@@ -89,5 +93,49 @@ class SkillExecutor:
         skill: SkillDefinition,
         params: dict[str, str],
     ) -> ExecutionResult:
-        """Synchronous wrapper for execute."""
+        """Synchronous wrapper for execute.
+
+        WARNING: This method uses asyncio.run() which should not be called
+        from within an async context. Use execute() instead in async code.
+
+        This method will raise a RuntimeError if called from within an
+        async context (e.g., inside a FastAPI route handler).
+
+        Args:
+            skill: Skill definition to execute
+            params: Parameters for the skill
+
+        Returns:
+            ExecutionResult from the skill execution
+
+        Raises:
+            RuntimeError: If called from within an async context
+        """
+        # Check if we're in an async context
+        try:
+            loop = asyncio.get_running_loop()
+            # If we get here, we're in an async context
+            raise RuntimeError(
+                "execute_sync() cannot be called from within an async context. "
+                "Use execute() instead."
+            )
+        except RuntimeError as e:
+            if "no running event loop" in str(e):
+                # This is expected - we're not in an async context
+                pass
+            else:
+                # Re-raise the RuntimeError we just created
+                raise
+
+        # Issue deprecation warning
+        warnings.warn(
+            "execute_sync() is deprecated. Use execute() with asyncio.run() "
+            "or async/await pattern instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
+        logger.warning(
+            "execute_sync() called - consider using async execute() instead"
+        )
         return asyncio.run(self.execute(skill, params))

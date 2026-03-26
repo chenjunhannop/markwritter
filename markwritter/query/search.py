@@ -17,63 +17,18 @@ from typing import (
     Protocol,
 )
 
-from pydantic import BaseModel, Field
+from markwritter.query.models import (
+    AnswerResult,
+    HighlightResult,
+    HybridSearchResult,
+    SearchResult,
+    SourceReference,
+)
 
 if TYPE_CHECKING:
     from markwritter.obsidian.vault import ObsidianVault
 
 logger = logging.getLogger(__name__)
-
-
-# ==============================================================================
-# Data Models
-# ==============================================================================
-
-
-class SearchResult(BaseModel):
-    """Model for a single search result."""
-
-    note_path: str
-    title: str
-    score: float
-    snippet: str
-
-
-class HighlightResult(BaseModel):
-    """Model for a search result with highlighted snippet."""
-
-    note_path: str
-    title: str
-    score: float
-    highlighted_snippet: str
-
-
-class HybridSearchResult(BaseModel):
-    """Model for hybrid search result with combined scores."""
-
-    note_path: str
-    title: str
-    semantic_score: float
-    keyword_score: float
-    combined_score: float
-    snippet: str
-
-
-class SourceReference(BaseModel):
-    """Model for a source reference in Q&A."""
-
-    note_path: str
-    title: str
-    relevance_score: float = 0.0
-    snippet: str = ""
-
-
-class AnswerResult(BaseModel):
-    """Model for Q&A answer."""
-
-    question: str
-    answer: str
-    sources: list[SourceReference] = Field(default_factory=list)
 
 
 # ==============================================================================

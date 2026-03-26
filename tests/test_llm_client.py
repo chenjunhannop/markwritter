@@ -194,9 +194,12 @@ class TestLLMClientRegistrySupport:
         assert client.registry is mock_registry
 
     def test_client_works_without_registry(self, llm_config: LLMConfig) -> None:
-        """Test that LLMClient works without registry (backward compatibility)."""
+        """Test that LLMClient auto-creates registry from config."""
         client = LLMClient(config=llm_config)
-        assert client.registry is None
+        # Phase 3.1: LLMClient now auto-creates ProviderRegistry from config
+        assert client.registry is not None
+        # The registry should be empty if config has no providers
+        assert len(client.registry.list_providers()) == 0
 
     def test_client_uses_registry_for_model_resolution(
         self, client_with_registry: LLMClient, mock_registry: MockProviderRegistry
@@ -449,8 +452,13 @@ class TestCompleteWithCapability:
     def test_raises_error_when_no_registry_for_capability(
         self, client_without_registry: LLMClient
     ) -> None:
-        """Test error when trying capability selection without registry."""
-        with pytest.raises(LLMError, match="Registry required"):
+        """Test error when trying capability selection with empty registry.
+
+        Phase 3.1: LLMClient now auto-creates ProviderRegistry from config.
+        With no providers configured, capability selection fails with
+        'No model found' instead of 'Registry required'.
+        """
+        with pytest.raises(LLMError, match="No model found with capability"):
             client_without_registry.complete_with_capability(
                 "Test prompt",
                 required_capability="vision",

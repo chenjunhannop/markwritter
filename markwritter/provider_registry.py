@@ -7,12 +7,9 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Optional
+from typing import Optional
 
 from markwritter.models import LLMConfig, ModelCapability, ModelDefinition, ProviderConfig
-
-if TYPE_CHECKING:
-    pass
 
 
 @dataclass

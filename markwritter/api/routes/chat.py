@@ -8,7 +8,7 @@ from fastapi.responses import StreamingResponse
 from markwritter.api.models.chat import ChatEvent, ChatRequest
 from markwritter.api.services.framework_bridge import get_framework
 
-router = APIRouter(prefix="/api/chat", tags=["chat"])
+router = APIRouter(prefix="/chat", tags=["chat"])
 
 
 @router.post("/")

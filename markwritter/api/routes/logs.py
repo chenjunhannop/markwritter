@@ -6,7 +6,7 @@ import queue
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 
-router = APIRouter(prefix="/api/logs", tags=["logs"])
+router = APIRouter(prefix="/logs", tags=["logs"])
 
 # Global log queue for cross-thread communication
 log_queue: queue.Queue = queue.Queue()

@@ -188,6 +188,19 @@ class TestKeywordSearchAPI:
 class TestSemanticSearchAPI:
     """Tests for semantic search API."""
 
+    @pytest.fixture(autouse=True)
+    def reset_semantic_search(self) -> Generator[None, None, None]:
+        """Reset semantic search state before and after each test."""
+        from markwritter.api.routes import query as query_routes
+
+        # Store original state
+        original_semantic = query_routes._semantic_search
+
+        yield
+
+        # Restore original state after test
+        query_routes._semantic_search = original_semantic
+
     def test_semantic_search_endpoint(
         self, client: TestClient, mock_memory_service: MagicMock
     ) -> None:
@@ -253,6 +266,19 @@ class TestSemanticSearchAPI:
 class TestQAAPI:
     """Tests for Q&A API."""
 
+    @pytest.fixture(autouse=True)
+    def reset_qa_system(self) -> Generator[None, None, None]:
+        """Reset QA system state before and after each test."""
+        from markwritter.api.routes import query as query_routes
+
+        # Store original state
+        original_qa = query_routes._qa_system
+
+        yield
+
+        # Restore original state after test
+        query_routes._qa_system = original_qa
+
     def test_ask_endpoint(
         self, client: TestClient, mock_memory_service: MagicMock, mock_llm_client: MagicMock
     ) -> None:
@@ -313,6 +339,19 @@ class TestQAAPI:
 
 class TestStreamingAPI:
     """Tests for streaming API."""
+
+    @pytest.fixture(autouse=True)
+    def reset_qa_system(self) -> Generator[None, None, None]:
+        """Reset QA system state before and after each test."""
+        from markwritter.api.routes import query as query_routes
+
+        # Store original state
+        original_qa = query_routes._qa_system
+
+        yield
+
+        # Restore original state after test
+        query_routes._qa_system = original_qa
 
     def test_ask_stream_endpoint(self, client: TestClient, mock_memory_service: MagicMock) -> None:
         """Test streaming ask endpoint."""

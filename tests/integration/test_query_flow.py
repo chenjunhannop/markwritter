@@ -167,6 +167,13 @@ def client(
     # Set up keyword search
     from markwritter.api.routes import query as query_routes
 
+    # Store original state
+    original_state = (
+        query_routes._keyword_search,
+        query_routes._semantic_search,
+        query_routes._qa_system,
+    )
+
     keyword_search = KeywordSearch(db_path=temp_db)
 
     # Index the test notes
@@ -184,6 +191,11 @@ def client(
     query_routes._qa_system = mock_llm_client
 
     yield TestClient(app)
+
+    # Restore original state
+    query_routes._keyword_search, query_routes._semantic_search, query_routes._qa_system = (
+        original_state
+    )
 
 
 # ==============================================================================

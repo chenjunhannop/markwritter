@@ -1,7 +1,9 @@
 """Pydantic models for Markwritter framework."""
 
 from pathlib import Path
-from typing import Any, Literal, Optional, Self
+from typing import Any, Literal, Optional
+
+from typing_extensions import Self
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 

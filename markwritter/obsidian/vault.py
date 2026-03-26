@@ -4,26 +4,9 @@ import os
 from pathlib import Path
 from typing import Optional
 
+from markwritter.exceptions import InvalidVaultError, NoteNotFoundError, VaultError
 from markwritter.obsidian.models import Note, NoteMeta
 from markwritter.obsidian.parser import NoteParser
-
-
-class VaultError(Exception):
-    """Base exception for vault operations."""
-
-    pass
-
-
-class NoteNotFoundError(VaultError):
-    """Raised when a note cannot be found."""
-
-    pass
-
-
-class InvalidVaultError(VaultError):
-    """Raised when vault path is invalid."""
-
-    pass
 
 
 class ObsidianVault:
