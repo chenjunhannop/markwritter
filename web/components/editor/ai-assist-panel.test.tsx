@@ -30,6 +30,18 @@ vi.mock('@/lib/record-store', () => ({
   }),
 }));
 
+function createMockCurrentRecord(): import('@/lib/record-api').NoteResponse {
+  return {
+    path: 'note-1.md',
+    title: 'Test',
+    content: 'Some content',
+    metadata: {},
+    tags: [],
+    links: [],
+    backlinks: [],
+  };
+}
+
 describe('AIAssistPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -57,16 +69,7 @@ describe('AIAssistPanel', () => {
     });
 
     it('should enable buttons when record exists', () => {
-      mockStore.currentRecord = {
-        id: 'record-1',
-        title: 'Test',
-        content: 'Content',
-        folder_id: null,
-        tags: [],
-        aliases: [],
-        created_at: '2024-01-01T00:00:00Z',
-        updated_at: '2024-01-01T00:00:00Z',
-      };
+      mockStore.currentRecord = createMockCurrentRecord();
       mockStore.content = 'Some content';
 
       render(<AIAssistPanel />);
@@ -78,16 +81,7 @@ describe('AIAssistPanel', () => {
 
     it('should show streaming state', () => {
       mockStore.isStreaming = true;
-      mockStore.currentRecord = {
-        id: 'record-1',
-        title: 'Test',
-        content: 'Content',
-        folder_id: null,
-        tags: [],
-        aliases: [],
-        created_at: '2024-01-01T00:00:00Z',
-        updated_at: '2024-01-01T00:00:00Z',
-      };
+      mockStore.currentRecord = createMockCurrentRecord();
 
       render(<AIAssistPanel />);
 
@@ -105,16 +99,7 @@ describe('AIAssistPanel', () => {
 
   describe('interactions', () => {
     beforeEach(() => {
-      mockStore.currentRecord = {
-        id: 'record-1',
-        title: 'Test',
-        content: 'Some content',
-        folder_id: null,
-        tags: [],
-        aliases: [],
-        created_at: '2024-01-01T00:00:00Z',
-        updated_at: '2024-01-01T00:00:00Z',
-      };
+      mockStore.currentRecord = createMockCurrentRecord();
       mockStore.content = 'Some content';
     });
 

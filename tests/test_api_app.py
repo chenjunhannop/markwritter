@@ -35,9 +35,11 @@ def client(app_settings: AppSettings) -> Generator[TestClient, None, None]:
 
 
 @pytest.fixture
-def client_with_vault(app_settings: AppSettings) -> Generator[TestClient, None, None]:
+def client_with_vault(app_settings: AppSettings, tmp_path) -> Generator[TestClient, None, None]:
     """Create a test client with vault path."""
-    app = create_app(app_settings, vault_path="/test/vault")
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    app = create_app(app_settings, vault_path=str(vault))
     with TestClient(app) as test_client:
         yield test_client
 
@@ -215,9 +217,11 @@ class TestApplicationFactory:
         assert app.title == "Test Markwritter API"
         assert app.version == "0.1.0-test"
 
-    def test_create_app_with_vault_path(self, app_settings: AppSettings) -> None:
+    def test_create_app_with_vault_path(self, app_settings: AppSettings, tmp_path) -> None:
         """Test creating app with vault path."""
-        app = create_app(app_settings, vault_path="/test/vault")
+        vault = tmp_path / "vault"
+        vault.mkdir()
+        app = create_app(app_settings, vault_path=str(vault))
 
         assert app is not None
 

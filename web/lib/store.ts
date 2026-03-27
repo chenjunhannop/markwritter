@@ -1,13 +1,13 @@
 /**
  * Zustand Stores for Markwritter
  *
- * State management for chat, skills, and settings.
+ * State management for chat, skills, and UI.
  */
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Skill, Session, Message, MessageRole } from './types';
-import { getSkills, executeSkill, getSettings, updateSettings } from './api';
+import { getSkills, executeSkill } from './api';
 
 // ==================== Chat Store ====================
 
@@ -233,69 +233,6 @@ export const useUIStore = create<UIState>()(
     }),
     {
       name: 'ui-storage',
-    }
-  )
-);
-
-// ==================== Settings Store ====================
-
-export interface AppSettings {
-  theme: 'light' | 'dark' | 'system';
-  language: string;
-  [key: string]: unknown;
-}
-
-interface SettingsState {
-  settings: AppSettings | null;
-  isLoading: boolean;
-  error: string | null;
-
-  // Actions
-  loadSettings: () => Promise<void>;
-  updateSettingsAction: (updates: Partial<AppSettings>) => Promise<void>;
-  setTheme: (theme: 'light' | 'dark' | 'system') => void;
-}
-
-export const useSettingsStore = create<SettingsState>()(
-  persist(
-    (set) => ({
-      settings: null,
-      isLoading: false,
-      error: null,
-
-      loadSettings: async () => {
-        set({ isLoading: true, error: null });
-        try {
-          const settings = await getSettings();
-          set({ settings: settings as AppSettings, isLoading: false });
-        } catch (e) {
-          const error = e instanceof Error ? e.message : 'Failed to load settings';
-          set({ error, isLoading: false });
-        }
-      },
-
-      updateSettingsAction: async (updates) => {
-        set({ isLoading: true, error: null });
-        try {
-          const result = await updateSettings(updates);
-          set({ settings: result.settings as AppSettings, isLoading: false });
-        } catch (e) {
-          const error = e instanceof Error ? e.message : 'Failed to update settings';
-          set({ error, isLoading: false });
-        }
-      },
-
-      setTheme: (theme) => {
-        set((state) => ({
-          settings: {
-            theme,
-            language: state.settings?.language ?? 'en',
-          },
-        }));
-      },
-    }),
-    {
-      name: 'settings-storage',
     }
   )
 );

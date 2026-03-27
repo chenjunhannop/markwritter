@@ -1,6 +1,19 @@
 """API models package."""
 
-from markwritter.api.models.chat import ChatEvent, ChatRequest
-from markwritter.api.models.skill import SkillResponse, SkillRunRequest, SkillRunResponse
+from markwritter.api.models.content import (
+    ContentDeleteResponse,
+    ContentListResponse,
+    ContentQueryRequest,
+    ContentResponse,
+    IngestRequest,
+    IngestResponse,
+)
 
-__all__ = ["ChatEvent", "ChatRequest", "SkillResponse", "SkillRunRequest", "SkillRunResponse"]
+__all__ = [
+    "IngestRequest",
+    "ContentQueryRequest",
+    "IngestResponse",
+    "ContentListResponse",
+    "ContentResponse",
+    "ContentDeleteResponse",
+]

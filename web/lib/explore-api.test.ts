@@ -5,11 +5,11 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { ApiError } from './api';
 import {
   getKnowledgeGraph,
   getNodeGraph,
   getRelatedNotes,
-  ApiError,
 } from './explore-api';
 import type { GraphData, NodeGraphData, RelatedNote } from './explore-api';
 

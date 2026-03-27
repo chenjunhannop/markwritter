@@ -25,7 +25,7 @@ interface NoteFormProps {
 
 export function NoteForm({ className }: NoteFormProps) {
   const searchParams = useSearchParams();
-  const recordId = searchParams.get('id');
+  const recordPath = searchParams.get('path');
 
   const currentRecord = useRecordStore((state) => state.currentRecord);
   const isSaving = useRecordStore((state) => state.isSaving);
@@ -33,12 +33,12 @@ export function NoteForm({ className }: NoteFormProps) {
   const saveRecord = useRecordStore((state) => state.saveRecord);
   const clearRecord = useRecordStore((state) => state.clearRecord);
 
-  // Clear form when no record ID
+  // Clear form when no record path
   useEffect(() => {
-    if (!recordId) {
+    if (!recordPath) {
       clearRecord();
     }
-  }, [recordId, clearRecord]);
+  }, [recordPath, clearRecord]);
 
   const handleSave = async () => {
     await saveRecord();

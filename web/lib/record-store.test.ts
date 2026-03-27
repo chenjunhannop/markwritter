@@ -1,7 +1,7 @@
 /**
  * Tests for Record Store
  *
- * Tests the Zustand store for managing record state.
+ * Tests the Zustand store for managing record state with Note API.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -11,6 +11,10 @@ import { act } from '@testing-library/react';
 vi.mock('./record-api', () => ({
   createRecord: vi.fn(),
   updateRecord: vi.fn(),
+  createNote: vi.fn(),
+  updateNote: vi.fn(),
+  getNote: vi.fn(),
+  deleteNote: vi.fn(),
   aiContinueStream: vi.fn(),
   aiRewrite: vi.fn(),
   aiPolish: vi.fn(),
@@ -26,8 +30,10 @@ vi.mock('./sse', () => ({
 
 // Import after mocking
 import {
-  createRecord,
-  updateRecord,
+  createNote,
+  updateNote,
+  getNote,
+  deleteNote,
   aiContinueStream,
   aiRewrite,
   aiPolish,
@@ -39,8 +45,10 @@ import { processSSEStream } from './sse';
 import { useRecordStore, useHasActiveRecord, useIsAIStreaming } from './record-store';
 
 // Type the mocked functions
-const mockedCreateRecord = vi.mocked(createRecord);
-const mockedUpdateRecord = vi.mocked(updateRecord);
+const mockedCreateNote = vi.mocked(createNote);
+const mockedUpdateNote = vi.mocked(updateNote);
+const mockedGetNote = vi.mocked(getNote);
+const mockedDeleteNote = vi.mocked(deleteNote);
 const mockedAiContinueStream = vi.mocked(aiContinueStream);
 const mockedAiRewrite = vi.mocked(aiRewrite);
 const mockedAiPolish = vi.mocked(aiPolish);
@@ -48,6 +56,20 @@ const mockedClassifyNote = vi.mocked(classifyNote);
 const mockedSuggestTags = vi.mocked(suggestTags);
 const mockedSuggestFolder = vi.mocked(suggestFolder);
 const mockedProcessSSEStream = vi.mocked(processSSEStream);
+
+// Helper to create a mock NoteResponse
+function createMockNoteResponse(overrides: Record<string, unknown> = {}): import('./record-api').NoteResponse {
+  return {
+    path: 'test-note.md',
+    title: 'Test Note',
+    content: 'Test content',
+    metadata: { title: 'Test Note' },
+    tags: [],
+    links: [],
+    backlinks: [],
+    ...overrides,
+  };
+}
 
 describe('Record Store', () => {
   beforeEach(() => {
@@ -204,25 +226,90 @@ describe('Record Store', () => {
     });
   });
 
+  describe('setCurrentRecord', () => {
+    it('should set record and populate store fields from NoteResponse', () => {
+      const noteResponse = createMockNoteResponse({
+        title: 'My Note',
+        content: 'Note content here',
+        metadata: { title: 'My Note', folder: 'projects', aliases: ['alias1', 'alias2'] },
+        tags: ['tag-a', 'tag-b'],
+      });
+
+      act(() => {
+        useRecordStore.getState().setCurrentRecord(noteResponse);
+      });
+
+      const state = useRecordStore.getState();
+      expect(state.currentRecord).toEqual(noteResponse);
+      expect(state.content).toBe('Note content here');
+      expect(state.title).toBe('My Note');
+      expect(state.tags).toEqual(['tag-a', 'tag-b']);
+      expect(state.folderId).toBe('projects');
+      expect(state.aliases).toEqual(['alias1', 'alias2']);
+    });
+
+    it('should handle NoteResponse with null metadata fields gracefully', () => {
+      const noteResponse = createMockNoteResponse({
+        metadata: {},
+      });
+
+      act(() => {
+        useRecordStore.getState().setCurrentRecord(noteResponse);
+      });
+
+      const state = useRecordStore.getState();
+      expect(state.folderId).toBeNull();
+      expect(state.aliases).toEqual([]);
+    });
+
+    it('should clear store when setting null record', () => {
+      const noteResponse = createMockNoteResponse({
+        content: 'Existing content',
+        title: 'Existing title',
+        metadata: { folder: 'existing-folder' },
+        tags: ['existing-tag'],
+      });
+
+      act(() => {
+        useRecordStore.getState().setCurrentRecord(noteResponse);
+      });
+
+      expect(useRecordStore.getState().currentRecord).not.toBeNull();
+
+      act(() => {
+        useRecordStore.getState().setCurrentRecord(null);
+      });
+
+      const state = useRecordStore.getState();
+      expect(state.currentRecord).toBeNull();
+      expect(state.content).toBe('');
+      expect(state.title).toBe('');
+      expect(state.tags).toEqual([]);
+      expect(state.aliases).toEqual([]);
+      expect(state.folderId).toBeNull();
+    });
+  });
+
   describe('saveRecord', () => {
-    it('should create a new record when no current record', async () => {
-      const mockResponse = {
-        id: 'new-record-id',
-        title: 'Test',
+    it('should create a new note when no current record', async () => {
+      const createdNoteResponse = createMockNoteResponse({
+        path: 'my-title.md',
+        title: 'My Title',
         content: 'Content',
-        folder_id: null,
         tags: ['test'],
-        aliases: [],
-        created_at: '2024-01-01T00:00:00Z',
-        updated_at: '2024-01-01T00:00:00Z',
-      };
+      });
 
-      mockedCreateRecord.mockResolvedValueOnce(mockResponse);
+      mockedCreateNote.mockResolvedValueOnce({
+        success: true,
+        path: 'my-title.md',
+      });
+      mockedGetNote.mockResolvedValueOnce(createdNoteResponse);
 
-      const { setContent, setTags, saveRecord } = useRecordStore.getState();
+      const { setContent, setTitle, setTags, saveRecord } = useRecordStore.getState();
 
       act(() => {
         setContent('Content');
+        setTitle('My Title');
         setTags(['test']);
       });
 
@@ -230,42 +317,109 @@ describe('Record Store', () => {
         await saveRecord();
       });
 
-      expect(mockedCreateRecord).toHaveBeenCalledWith({
+      expect(mockedCreateNote).toHaveBeenCalledWith({
+        path: 'my-title.md',
         content: 'Content',
-        title: null,
-        tags: ['test'],
-        folder_id: null,
-        aliases: [],
+        metadata: { title: 'My Title' },
       });
 
-      expect(useRecordStore.getState().currentRecord).toEqual(mockResponse);
-      expect(useRecordStore.getState().isSaving).toBe(false);
+      expect(mockedGetNote).toHaveBeenCalledWith('my-title.md');
+
+      const state = useRecordStore.getState();
+      expect(state.currentRecord).toEqual(createdNoteResponse);
+      expect(state.currentRecord?.path).toBe('my-title.md');
+      expect(state.isSaving).toBe(false);
     });
 
-    it('should update existing record', async () => {
-      const existingRecord = {
-        id: 'existing-id',
+    it('should create note with folder prefix when folderId is set', async () => {
+      const createdNoteResponse = createMockNoteResponse({
+        path: 'projects/my-title.md',
+        title: 'My Title',
+        content: 'Content',
+      });
+
+      mockedCreateNote.mockResolvedValueOnce({
+        success: true,
+        path: 'projects/my-title.md',
+      });
+      mockedGetNote.mockResolvedValueOnce(createdNoteResponse);
+
+      const { setContent, setTitle, setFolderId, saveRecord } = useRecordStore.getState();
+
+      act(() => {
+        setContent('Content');
+        setTitle('My Title');
+        setFolderId('projects');
+      });
+
+      await act(async () => {
+        await saveRecord();
+      });
+
+      expect(mockedCreateNote).toHaveBeenCalledWith({
+        path: 'projects/my-title.md',
+        content: 'Content',
+        metadata: { title: 'My Title', folder: 'projects' },
+      });
+    });
+
+    it('should create note with untitled path when no title', async () => {
+      const createdNoteResponse = createMockNoteResponse({
+        path: 'untitled.md',
+        content: 'Content',
+        title: '',
+      });
+
+      mockedCreateNote.mockResolvedValueOnce({
+        success: true,
+        path: 'untitled.md',
+      });
+      mockedGetNote.mockResolvedValueOnce(createdNoteResponse);
+
+      const { setContent, saveRecord } = useRecordStore.getState();
+
+      act(() => {
+        setContent('Content');
+      });
+
+      await act(async () => {
+        await saveRecord();
+      });
+
+      expect(mockedCreateNote).toHaveBeenCalledWith({
+        path: 'untitled.md',
+        content: 'Content',
+        metadata: {},
+      });
+    });
+
+    it('should update existing note', async () => {
+      const existingNote = createMockNoteResponse({
+        path: 'existing-note.md',
         title: 'Original',
         content: 'Original content',
-        folder_id: null,
-        tags: [],
-        aliases: [],
-        created_at: '2024-01-01T00:00:00Z',
-        updated_at: '2024-01-01T00:00:00Z',
-      };
+        metadata: { title: 'Original', folder: 'dev-notes' },
+        tags: ['original'],
+      });
 
-      const updatedResponse = {
-        ...existingRecord,
+      const updatedNoteResponse = createMockNoteResponse({
+        path: 'existing-note.md',
+        title: 'Original',
         content: 'Updated content',
-        updated_at: '2024-01-02T00:00:00Z',
-      };
+        metadata: { title: 'Original', folder: 'dev-notes' },
+        tags: ['original'],
+      });
 
-      mockedUpdateRecord.mockResolvedValueOnce(updatedResponse);
+      mockedUpdateNote.mockResolvedValueOnce({
+        success: true,
+        path: 'existing-note.md',
+      });
+      mockedGetNote.mockResolvedValueOnce(updatedNoteResponse);
 
       const { setCurrentRecord, setContent, saveRecord } = useRecordStore.getState();
 
       act(() => {
-        setCurrentRecord(existingRecord);
+        setCurrentRecord(existingNote);
         setContent('Updated content');
       });
 
@@ -273,20 +427,52 @@ describe('Record Store', () => {
         await saveRecord();
       });
 
-      expect(mockedUpdateRecord).toHaveBeenCalledWith({
-        id: 'existing-id',
-        content: 'Updated content',
-        title: 'Original',
-        tags: [],
-        aliases: [],
-        folder_id: null,
+      expect(mockedUpdateNote).toHaveBeenCalledWith(
+        'existing-note.md',
+        expect.objectContaining({
+          content: 'Updated content',
+          metadata: expect.objectContaining({ title: 'Original', folder: 'dev-notes' }),
+        })
+      );
+
+      expect(mockedGetNote).toHaveBeenCalledWith('existing-note.md');
+      expect(useRecordStore.getState().currentRecord).toEqual(updatedNoteResponse);
+    });
+
+    it('should include aliases in metadata when saving', async () => {
+      const createdNoteResponse = createMockNoteResponse({
+        path: 'my-note.md',
+        title: 'My Note',
+        content: 'Content',
       });
 
-      expect(useRecordStore.getState().currentRecord).toEqual(updatedResponse);
+      mockedCreateNote.mockResolvedValueOnce({
+        success: true,
+        path: 'my-note.md',
+      });
+      mockedGetNote.mockResolvedValueOnce(createdNoteResponse);
+
+      const { setContent, setTitle, setAliases, saveRecord } = useRecordStore.getState();
+
+      act(() => {
+        setContent('Content');
+        setTitle('My Note');
+        setAliases(['alias-a', 'alias-b']);
+      });
+
+      await act(async () => {
+        await saveRecord();
+      });
+
+      expect(mockedCreateNote).toHaveBeenCalledWith({
+        path: 'my-note.md',
+        content: 'Content',
+        metadata: { title: 'My Note', aliases: ['alias-a', 'alias-b'] },
+      });
     });
 
     it('should handle save errors', async () => {
-      mockedCreateRecord.mockRejectedValueOnce(new Error('Save failed'));
+      mockedCreateNote.mockRejectedValueOnce(new Error('Save failed'));
 
       const { setContent, saveRecord } = useRecordStore.getState();
 
@@ -303,8 +489,65 @@ describe('Record Store', () => {
     });
   });
 
+  describe('deleteRecord', () => {
+    it('should delete the current record via Notes API', async () => {
+      const existingNote = createMockNoteResponse({
+        path: 'to-delete.md',
+        content: 'Content',
+      });
+
+      mockedDeleteNote.mockResolvedValueOnce(undefined);
+
+      const { setCurrentRecord, deleteRecord } = useRecordStore.getState();
+
+      act(() => {
+        setCurrentRecord(existingNote);
+      });
+
+      await act(async () => {
+        await deleteRecord();
+      });
+
+      expect(mockedDeleteNote).toHaveBeenCalledWith('to-delete.md');
+      expect(useRecordStore.getState().currentRecord).toBeNull();
+      expect(useRecordStore.getState().content).toBe('');
+      expect(useRecordStore.getState().title).toBe('');
+    });
+
+    it('should do nothing when no current record', async () => {
+      const { deleteRecord } = useRecordStore.getState();
+
+      await act(async () => {
+        await deleteRecord();
+      });
+
+      expect(mockedDeleteNote).not.toHaveBeenCalled();
+    });
+
+    it('should handle delete errors', async () => {
+      const existingNote = createMockNoteResponse({
+        path: 'error-note.md',
+        content: 'Content',
+      });
+
+      mockedDeleteNote.mockRejectedValueOnce(new Error('Delete failed'));
+
+      const { setCurrentRecord, deleteRecord } = useRecordStore.getState();
+
+      act(() => {
+        setCurrentRecord(existingNote);
+      });
+
+      await act(async () => {
+        await deleteRecord();
+      });
+
+      expect(useRecordStore.getState().saveError).toBe('Delete failed');
+    });
+  });
+
   describe('aiContinue', () => {
-    it('should stream AI continue content', async () => {
+    it('should stream AI continue content without recordId', async () => {
       const mockResponse = {
         ok: true,
         body: {},
@@ -320,22 +563,19 @@ describe('Record Store', () => {
       const { setCurrentRecord, setContent, aiContinue } = useRecordStore.getState();
 
       act(() => {
-        setCurrentRecord({
-          id: 'record-1',
-          title: 'Test',
-          content: 'Initial',
-          folder_id: null,
-          tags: [],
-          aliases: [],
-          created_at: '2024-01-01T00:00:00Z',
-          updated_at: '2024-01-01T00:00:00Z',
-        });
+        setCurrentRecord(createMockNoteResponse({ path: 'note-1.md', content: 'Initial' }));
         setContent('Initial content');
       });
 
       await act(async () => {
         await aiContinue();
       });
+
+      // Verify aiContinueStream was called WITHOUT recordId
+      expect(mockedAiContinueStream).toHaveBeenCalledWith(
+        'Initial content',
+        expect.any(AbortSignal)
+      );
 
       // Content should be updated with streamed text
       expect(useRecordStore.getState().content).toBe('Initial contentcontinued text');
@@ -348,16 +588,7 @@ describe('Record Store', () => {
       const { setCurrentRecord, setContent, aiContinue } = useRecordStore.getState();
 
       act(() => {
-        setCurrentRecord({
-          id: 'record-1',
-          title: 'Test',
-          content: '',
-          folder_id: null,
-          tags: [],
-          aliases: [],
-          created_at: '2024-01-01T00:00:00Z',
-          updated_at: '2024-01-01T00:00:00Z',
-        });
+        setCurrentRecord(createMockNoteResponse({ path: 'note-1.md' }));
         setContent('Content');
       });
 
@@ -381,7 +612,7 @@ describe('Record Store', () => {
   });
 
   describe('aiRewrite', () => {
-    it('should rewrite content', async () => {
+    it('should rewrite content without recordId', async () => {
       mockedAiRewrite.mockResolvedValueOnce({
         original: 'original text',
         rewritten: 'rewritten text',
@@ -390,16 +621,7 @@ describe('Record Store', () => {
       const { setCurrentRecord, setContent, aiRewrite } = useRecordStore.getState();
 
       act(() => {
-        setCurrentRecord({
-          id: 'record-1',
-          title: 'Test',
-          content: '',
-          folder_id: null,
-          tags: [],
-          aliases: [],
-          created_at: '2024-01-01T00:00:00Z',
-          updated_at: '2024-01-01T00:00:00Z',
-        });
+        setCurrentRecord(createMockNoteResponse({ path: 'note-1.md' }));
         setContent('original text');
       });
 
@@ -407,6 +629,8 @@ describe('Record Store', () => {
         await aiRewrite();
       });
 
+      // Verify aiRewrite was called WITHOUT recordId
+      expect(mockedAiRewrite).toHaveBeenCalledWith('original text');
       expect(useRecordStore.getState().content).toBe('rewritten text');
     });
 
@@ -416,16 +640,7 @@ describe('Record Store', () => {
       const { setCurrentRecord, setContent, aiRewrite } = useRecordStore.getState();
 
       act(() => {
-        setCurrentRecord({
-          id: 'record-1',
-          title: 'Test',
-          content: '',
-          folder_id: null,
-          tags: [],
-          aliases: [],
-          created_at: '2024-01-01T00:00:00Z',
-          updated_at: '2024-01-01T00:00:00Z',
-        });
+        setCurrentRecord(createMockNoteResponse({ path: 'note-1.md' }));
         setContent('content');
       });
 
@@ -438,7 +653,7 @@ describe('Record Store', () => {
   });
 
   describe('aiPolish', () => {
-    it('should polish content', async () => {
+    it('should polish content without recordId', async () => {
       mockedAiPolish.mockResolvedValueOnce({
         original: 'rough text',
         polished: 'polished text',
@@ -447,16 +662,7 @@ describe('Record Store', () => {
       const { setCurrentRecord, setContent, aiPolish } = useRecordStore.getState();
 
       act(() => {
-        setCurrentRecord({
-          id: 'record-1',
-          title: 'Test',
-          content: '',
-          folder_id: null,
-          tags: [],
-          aliases: [],
-          created_at: '2024-01-01T00:00:00Z',
-          updated_at: '2024-01-01T00:00:00Z',
-        });
+        setCurrentRecord(createMockNoteResponse({ path: 'note-1.md' }));
         setContent('rough text');
       });
 
@@ -464,6 +670,8 @@ describe('Record Store', () => {
         await aiPolish();
       });
 
+      // Verify aiPolish was called WITHOUT recordId
+      expect(mockedAiPolish).toHaveBeenCalledWith('rough text');
       expect(useRecordStore.getState().content).toBe('polished text');
     });
 
@@ -473,16 +681,7 @@ describe('Record Store', () => {
       const { setCurrentRecord, setContent, aiPolish } = useRecordStore.getState();
 
       act(() => {
-        setCurrentRecord({
-          id: 'record-1',
-          title: 'Test',
-          content: '',
-          folder_id: null,
-          tags: [],
-          aliases: [],
-          created_at: '2024-01-01T00:00:00Z',
-          updated_at: '2024-01-01T00:00:00Z',
-        });
+        setCurrentRecord(createMockNoteResponse({ path: 'note-1.md' }));
         setContent('content');
       });
 
@@ -657,16 +856,12 @@ describe('Record Store', () => {
       } = useRecordStore.getState();
 
       act(() => {
-        setCurrentRecord({
-          id: 'record-1',
-          title: 'Test',
+        setCurrentRecord(createMockNoteResponse({
+          path: 'note-1.md',
           content: 'Content',
-          folder_id: null,
+          metadata: { folder: 'test-folder' },
           tags: ['tag'],
-          aliases: [],
-          created_at: '2024-01-01T00:00:00Z',
-          updated_at: '2024-01-01T00:00:00Z',
-        });
+        }));
         setContent('Content');
         setTitle('Title');
         setTags(['tag']);
@@ -693,20 +888,10 @@ describe('Record Store', () => {
     it('useHasActiveRecord should return true when record exists', () => {
       const { setCurrentRecord } = useRecordStore.getState();
 
-      // Check initial state directly
       expect(useRecordStore.getState().currentRecord).toBeNull();
 
       act(() => {
-        setCurrentRecord({
-          id: 'record-1',
-          title: 'Test',
-          content: 'Content',
-          folder_id: null,
-          tags: [],
-          aliases: [],
-          created_at: '2024-01-01T00:00:00Z',
-          updated_at: '2024-01-01T00:00:00Z',
-        });
+        setCurrentRecord(createMockNoteResponse({ path: 'note-1.md' }));
       });
 
       expect(useRecordStore.getState().currentRecord).not.toBeNull();
@@ -715,7 +900,6 @@ describe('Record Store', () => {
     it('useIsAIStreaming should return streaming state', () => {
       const { setIsStreaming } = useRecordStore.getState();
 
-      // Check initial state directly
       expect(useRecordStore.getState().isStreaming).toBe(false);
 
       act(() => {

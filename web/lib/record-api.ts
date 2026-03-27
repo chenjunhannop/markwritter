@@ -7,7 +7,7 @@
  * - Classification and suggestions
  */
 
-import { ApiError } from './api';
+import { ApiError, createApiError } from './api';
 
 // API base URL from environment variable
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -133,22 +133,70 @@ export interface AIStreamEvent {
   content: string;
 }
 
-// ==================== Helper Functions ====================
+// ==================== Note API Types ====================
 
 /**
- * Create an ApiError from a failed Response.
+ * Request to create a note via Notes API
  */
-async function createApiError(response: Response): Promise<ApiError> {
-  let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-  try {
-    const body = await response.text();
-    if (body) {
-      errorMessage = `${response.status}: ${body}`;
-    }
-  } catch {
-    // Ignore parsing errors
-  }
-  return new ApiError(response.status, errorMessage);
+export interface NoteCreateRequest {
+  /** Relative path for the note */
+  path: string;
+  /** Note content (markdown) */
+  content: string;
+  /** Note metadata */
+  metadata?: Record<string, unknown>;
+  /** Overwrite if exists */
+  overwrite?: boolean;
+}
+
+/**
+ * Request to update a note via Notes API
+ */
+export interface NoteUpdateRequest {
+  /** Updated note content */
+  content?: string;
+  /** Updated note metadata */
+  metadata?: Record<string, unknown>;
+  /** Update mode: replace, append, prepend */
+  mode?: 'replace' | 'append' | 'prepend';
+}
+
+/**
+ * Response from Notes API
+ */
+export interface NoteResponse {
+  /** Unique note path (serves as identifier) */
+  path: string;
+  /** Note title */
+  title: string;
+  /** Note content (markdown) */
+  content: string;
+  /** Note metadata (may contain folder, aliases, etc.) */
+  metadata: Record<string, unknown>;
+  /** Tags extracted from metadata */
+  tags: string[];
+  /** Links to other notes */
+  links: string[];
+  /** Notes linking to this note */
+  backlinks: string[];
+}
+
+/**
+ * Response from note create endpoint
+ */
+export interface NoteCreateResponse {
+  success: boolean;
+  path: string;
+  message?: string;
+}
+
+/**
+ * Response from note update endpoint
+ */
+export interface NoteUpdateResponse {
+  success: boolean;
+  path: string;
+  message?: string;
 }
 
 // ==================== Record CRUD ====================
@@ -199,19 +247,108 @@ export async function updateRecord(
   return response.json();
 }
 
+// ==================== Note CRUD (Notes API) ====================
+
+/**
+ * Create a new note via the Notes API.
+ *
+ * @param request - The create request
+ * @returns The create response (success, path)
+ * @throws ApiError if the request fails
+ */
+export async function createNote(
+  request: NoteCreateRequest
+): Promise<NoteCreateResponse> {
+  const response = await fetch(`${API_BASE}/api/v1/notes`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+
+  if (!response.ok) {
+    throw await createApiError(response);
+  }
+
+  return response.json();
+}
+
+/**
+ * Update an existing note via the Notes API.
+ *
+ * @param path - The note path
+ * @param request - The update request
+ * @returns The update response (success, path)
+ * @throws ApiError if the request fails
+ */
+export async function updateNote(
+  path: string,
+  request: NoteUpdateRequest
+): Promise<NoteUpdateResponse> {
+  const response = await fetch(
+    `${API_BASE}/api/v1/notes/${encodeURIComponent(path)}`,
+    {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    }
+  );
+
+  if (!response.ok) {
+    throw await createApiError(response);
+  }
+
+  return response.json();
+}
+
+/**
+ * Get a note by path via the Notes API.
+ *
+ * @param path - The note path
+ * @returns The note data
+ * @throws ApiError if the request fails
+ */
+export async function getNote(path: string): Promise<NoteResponse> {
+  const response = await fetch(
+    `${API_BASE}/api/v1/notes/${encodeURIComponent(path)}`
+  );
+
+  if (!response.ok) {
+    throw await createApiError(response);
+  }
+
+  return response.json();
+}
+
+/**
+ * Delete a note by path via the Notes API.
+ *
+ * @param path - The note path
+ * @throws ApiError if the request fails
+ */
+export async function deleteNote(path: string): Promise<void> {
+  const response = await fetch(
+    `${API_BASE}/api/v1/notes/${encodeURIComponent(path)}`,
+    {
+      method: 'DELETE',
+    }
+  );
+
+  if (!response.ok) {
+    throw await createApiError(response);
+  }
+}
+
 // ==================== AI Assistance ====================
 
 /**
  * Request AI to continue writing (streaming).
  *
- * @param recordId - The record ID
  * @param content - Current content
  * @param signal - Optional AbortSignal for cancellation
  * @returns Response object for SSE processing
  * @throws ApiError if the request fails
  */
 export async function aiContinueStream(
-  recordId: string,
   content: string,
   signal?: AbortSignal
 ): Promise<Response> {
@@ -221,7 +358,6 @@ export async function aiContinueStream(
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        record_id: recordId,
         content,
       }),
       signal,
@@ -238,13 +374,11 @@ export async function aiContinueStream(
 /**
  * Request AI to rewrite content.
  *
- * @param recordId - The record ID
  * @param content - Content to rewrite
  * @returns Rewritten content
  * @throws ApiError if the request fails
  */
 export async function aiRewrite(
-  recordId: string,
   content: string
 ): Promise<AIRewriteResponse> {
   const response = await fetch(
@@ -253,7 +387,6 @@ export async function aiRewrite(
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        record_id: recordId,
         content,
       }),
     }
@@ -269,13 +402,11 @@ export async function aiRewrite(
 /**
  * Request AI to polish content.
  *
- * @param recordId - The record ID
  * @param content - Content to polish
  * @returns Polished content
  * @throws ApiError if the request fails
  */
 export async function aiPolish(
-  recordId: string,
   content: string
 ): Promise<AIPolishResponse> {
   const response = await fetch(
@@ -284,7 +415,6 @@ export async function aiPolish(
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        record_id: recordId,
         content,
       }),
     }

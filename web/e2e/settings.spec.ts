@@ -15,7 +15,7 @@ const mockSettings = {
 test.describe('Settings Page', () => {
   test.describe('Page Load', () => {
     test('should load settings page successfully', async ({ settingsPage }) => {
-      await settingsPage.page.route('**/api/settings', async (route) => {
+      await settingsPage.page.route('**/api/v1/settings', async (route) => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -30,7 +30,7 @@ test.describe('Settings Page', () => {
     });
 
     test('should display page title', async ({ settingsPage }) => {
-      await settingsPage.page.route('**/api/settings', async (route) => {
+      await settingsPage.page.route('**/api/v1/settings', async (route) => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -52,7 +52,7 @@ test.describe('Settings Page', () => {
 
   test.describe('Settings Display', () => {
     test('should display settings content', async ({ settingsPage }) => {
-      await settingsPage.page.route('**/api/settings', async (route) => {
+      await settingsPage.page.route('**/api/v1/settings', async (route) => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -68,7 +68,7 @@ test.describe('Settings Page', () => {
     });
 
     test('should display theme section', async ({ settingsPage }) => {
-      await settingsPage.page.route('**/api/settings', async (route) => {
+      await settingsPage.page.route('**/api/v1/settings', async (route) => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -86,7 +86,7 @@ test.describe('Settings Page', () => {
     });
 
     test('should display language section', async ({ settingsPage }) => {
-      await settingsPage.page.route('**/api/settings', async (route) => {
+      await settingsPage.page.route('**/api/v1/settings', async (route) => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -105,10 +105,10 @@ test.describe('Settings Page', () => {
   });
 
   test.describe('API Integration', () => {
-    test('should call GET /api/settings on page load', async ({ settingsPage }) => {
+    test('should call GET /api/v1/settings on page load', async ({ settingsPage }) => {
       let settingsCalled = false;
 
-      await settingsPage.page.route('**/api/settings', async (route) => {
+      await settingsPage.page.route('**/api/v1/settings', async (route) => {
         settingsCalled = true;
         await route.fulfill({
           status: 200,
@@ -130,7 +130,7 @@ test.describe('Settings Page', () => {
     });
 
     test('should handle API error gracefully', async ({ settingsPage }) => {
-      await settingsPage.page.route('**/api/settings', async (route) => {
+      await settingsPage.page.route('**/api/v1/settings', async (route) => {
         await route.fulfill({
           status: 500,
           body: 'Internal Server Error',

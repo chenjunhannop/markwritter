@@ -270,13 +270,20 @@ def _register_routes(app: FastAPI, vault_path: Optional[str] = None) -> None:
         return {"status": "alive"}
 
     # Register additional routers
-    from markwritter.api.routes import chat, explore, logs, notes, query, record, search, skills
+    from markwritter.api.routes import chat, content, explore, logs, notes, query, record, search, settings, skills
 
     # Configure explore routes with vault path
     if vault_path:
         explore.set_vault_path(vault_path)
 
+    # Configure settings routes with data directory
+    if vault_path:
+        settings.init_settings(vault_path)
+
+    app.include_router(settings.router, prefix="/api/v1/settings", tags=["Settings"])
+
     app.include_router(notes.router, prefix="/api/v1", tags=["Notes"])
+    app.include_router(content.router, prefix="/api/v1/content", tags=["Content"])
     app.include_router(search.router, prefix="/api/v1", tags=["Search"])
     app.include_router(query.router, prefix="/api/v1/query", tags=["Query"])
     app.include_router(record.router, prefix="/api/v1/record", tags=["Record"])

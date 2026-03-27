@@ -1,7 +1,7 @@
 /**
  * Tests for Zustand Stores
  *
- * Tests the state management stores for chat, skills, and settings.
+ * Tests the state management stores for chat and skills.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -10,19 +10,15 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 vi.mock('./api', () => ({
   getSkills: vi.fn(),
   executeSkill: vi.fn(),
-  getSettings: vi.fn(),
-  updateSettings: vi.fn(),
 }));
 
 // Import after mocking
-import { useChatStore, useSkillStore, useSettingsStore } from './store';
-import { getSkills, executeSkill, getSettings, updateSettings } from './api';
+import { useChatStore, useSkillStore } from './store';
+import { getSkills, executeSkill } from './api';
 
 // Get mocked functions
 const mockedGetSkills = vi.mocked(getSkills);
 const mockedExecuteSkill = vi.mocked(executeSkill);
-const mockedGetSettings = vi.mocked(getSettings);
-const mockedUpdateSettings = vi.mocked(updateSettings);
 
 // Reset stores between tests
 const resetStores = () => {
@@ -34,11 +30,6 @@ const resetStores = () => {
   useSkillStore.setState({
     skills: [],
     selectedSkill: null,
-    isLoading: false,
-    error: null,
-  });
-  useSettingsStore.setState({
-    settings: null,
     isLoading: false,
     error: null,
   });
@@ -311,90 +302,3 @@ describe('useSkillStore', () => {
   });
 });
 
-describe('useSettingsStore', () => {
-  beforeEach(() => {
-    resetStores();
-    vi.clearAllMocks();
-  });
-
-  describe('initial state', () => {
-    it('should start with null settings', () => {
-      const state = useSettingsStore.getState();
-      expect(state.settings).toBeNull();
-      expect(state.isLoading).toBe(false);
-      expect(state.error).toBeNull();
-    });
-  });
-
-  describe('loadSettings', () => {
-    it('should load settings', async () => {
-      const mockSettings = { theme: 'dark' as const, language: 'en' };
-      mockedGetSettings.mockResolvedValue(mockSettings);
-
-      const store = useSettingsStore.getState();
-      await store.loadSettings();
-
-      const state = useSettingsStore.getState();
-      expect(state.settings).toEqual(mockSettings);
-      expect(state.isLoading).toBe(false);
-    });
-  });
-
-  describe('updateSettingsAction', () => {
-    it('should update settings', async () => {
-      const updatedSettings = { theme: 'light' as const, language: 'en' };
-      mockedUpdateSettings.mockResolvedValue({ success: true, settings: updatedSettings });
-
-      useSettingsStore.setState({ settings: { theme: 'dark', language: 'en' } });
-      const store = useSettingsStore.getState();
-      await store.updateSettingsAction({ theme: 'light' });
-
-      const state = useSettingsStore.getState();
-      expect(state.settings).toEqual(updatedSettings);
-    });
-  });
-
-  describe('setTheme', () => {
-    it('should update theme in settings', () => {
-      useSettingsStore.setState({ settings: { theme: 'light', language: 'en' } });
-      const store = useSettingsStore.getState();
-      store.setTheme('dark');
-
-      const state = useSettingsStore.getState();
-      expect(state.settings?.theme).toBe('dark');
-    });
-
-    it('should create settings with default language when null', () => {
-      const store = useSettingsStore.getState();
-      store.setTheme('dark');
-
-      const state = useSettingsStore.getState();
-      expect(state.settings?.theme).toBe('dark');
-      expect(state.settings?.language).toBe('en');
-    });
-
-    it('should preserve existing language when updating theme', () => {
-      useSettingsStore.setState({ settings: { theme: 'light', language: 'zh' } });
-      const store = useSettingsStore.getState();
-      store.setTheme('dark');
-
-      const state = useSettingsStore.getState();
-      expect(state.settings?.theme).toBe('dark');
-      expect(state.settings?.language).toBe('zh');
-    });
-
-    it('should create complete AppSettings object without type assertion', () => {
-      // This test ensures the setTheme function creates a proper AppSettings
-      // object without relying on type assertions that could hide errors
-      const store = useSettingsStore.getState();
-      store.setTheme('system');
-
-      const state = useSettingsStore.getState();
-      // Verify the settings object has all required properties
-      expect(state.settings).toEqual({
-        theme: 'system',
-        language: 'en',
-      });
-    });
-  });
-});

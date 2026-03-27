@@ -10,25 +10,80 @@
 
 import { create } from 'zustand';
 import {
-  createRecord,
-  updateRecord,
+  createNote,
+  updateNote,
+  getNote,
+  deleteNote as deleteNoteApi,
   aiContinueStream,
   aiRewrite,
   aiPolish,
   classifyNote,
   suggestTags,
   suggestFolder,
-  type RecordResponse,
+  type NoteResponse,
   type ClassifyResponse,
   type FolderSuggestionResponse,
 } from './record-api';
 import { processSSEStream } from './sse';
 
+// ==================== Helpers ====================
+
+/**
+ * Slugify a title into a safe file path.
+ * Lowercase, replace spaces with dashes, remove special chars.
+ */
+function slugify(title: string): string {
+  return title
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/[\s_]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+/**
+ * Build metadata object from store state for the Notes API.
+ */
+function buildMetadata(
+  title: string,
+  folderId: string | null,
+  aliases: string[]
+): Record<string, unknown> {
+  const metadata: Record<string, unknown> = {};
+
+  if (title) {
+    metadata.title = title;
+  }
+  if (folderId) {
+    metadata.folder = folderId;
+  }
+  if (aliases.length > 0) {
+    metadata.aliases = aliases;
+  }
+
+  return metadata;
+}
+
+/**
+ * Extract fields from NoteResponse metadata.
+ */
+function extractMetadataFields(
+  metadata: Record<string, unknown>
+): { folderId: string | null; aliases: string[] } {
+  return {
+    folderId: (metadata.folder as string) ?? null,
+    aliases: Array.isArray(metadata.aliases)
+      ? (metadata.aliases as string[])
+      : [],
+  };
+}
+
 // ==================== Types ====================
 
 interface RecordState {
   // Current record data
-  currentRecord: RecordResponse | null;
+  currentRecord: NoteResponse | null;
   content: string;
   title: string;
   tags: string[];
@@ -60,9 +115,10 @@ interface RecordState {
   setFolderId: (folderId: string | null) => void;
 
   // Record actions
-  setCurrentRecord: (record: RecordResponse | null) => void;
+  setCurrentRecord: (record: NoteResponse | null) => void;
   saveRecord: () => Promise<void>;
   clearRecord: () => void;
+  deleteRecord: () => Promise<void>;
 
   // AI assistance actions
   aiContinue: () => Promise<void>;
@@ -149,13 +205,14 @@ export const useRecordStore = create<RecordState>()((set, get) => ({
   // Record actions
   setCurrentRecord: (record) => {
     if (record) {
+      const { folderId, aliases } = extractMetadataFields(record.metadata);
       set({
         currentRecord: record,
         content: record.content,
         title: record.title ?? '',
         tags: record.tags,
-        aliases: record.aliases,
-        folderId: record.folder_id,
+        aliases,
+        folderId,
       });
     } else {
       set({
@@ -175,30 +232,35 @@ export const useRecordStore = create<RecordState>()((set, get) => ({
     set({ isSaving: true, saveError: null });
 
     try {
+      const metadata = buildMetadata(state.title, state.folderId, state.aliases);
+
       if (state.currentRecord) {
-        // Update existing record
-        const updated = await updateRecord({
-          id: state.currentRecord.id,
-          title: state.title || null,
+        // Update existing note
+        await updateNote(state.currentRecord.path, {
           content: state.content,
-          tags: state.tags,
-          aliases: state.aliases,
-          folder_id: state.folderId,
+          metadata,
         });
+
+        // Fetch the updated note to get latest data
+        const updated = await getNote(state.currentRecord.path);
 
         set({
           currentRecord: updated,
           isSaving: false,
         });
       } else {
-        // Create new record
-        const created = await createRecord({
+        // Create new note
+        const notePath = slugify(state.title || 'untitled') + '.md';
+        const folderPrefix = state.folderId ? `${state.folderId}/` : '';
+
+        await createNote({
+          path: `${folderPrefix}${notePath}`,
           content: state.content,
-          title: state.title || null,
-          tags: state.tags,
-          aliases: state.aliases,
-          folder_id: state.folderId,
+          metadata,
         });
+
+        // Fetch the created note to get full NoteResponse
+        const created = await getNote(`${folderPrefix}${notePath}`);
 
         set({
           currentRecord: created,
@@ -230,6 +292,35 @@ export const useRecordStore = create<RecordState>()((set, get) => ({
     });
   },
 
+  deleteRecord: async () => {
+    const state = get();
+    const path = state.currentRecord?.path;
+
+    if (!path) {
+      return;
+    }
+
+    try {
+      await deleteNoteApi(path);
+      set({
+        currentRecord: null,
+        content: '',
+        title: '',
+        tags: [],
+        aliases: [],
+        folderId: null,
+        saveError: null,
+        streamError: null,
+        classificationResult: null,
+        tagSuggestions: [],
+        folderSuggestion: null,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Delete failed';
+      set({ saveError: message });
+    }
+  },
+
   // AI assistance actions
   aiContinue: async () => {
     const state = get();
@@ -254,7 +345,6 @@ export const useRecordStore = create<RecordState>()((set, get) => ({
 
     try {
       const response = await aiContinueStream(
-        state.currentRecord.id,
         state.content,
         controller.signal
       );
@@ -312,7 +402,7 @@ export const useRecordStore = create<RecordState>()((set, get) => ({
     set({ isStreaming: true, streamError: null });
 
     try {
-      const result = await aiRewrite(state.currentRecord.id, state.content);
+      const result = await aiRewrite(state.content);
 
       set({
         content: result.rewritten,
@@ -337,7 +427,7 @@ export const useRecordStore = create<RecordState>()((set, get) => ({
     set({ isStreaming: true, streamError: null });
 
     try {
-      const result = await aiPolish(state.currentRecord.id, state.content);
+      const result = await aiPolish(state.content);
 
       set({
         content: result.polished,
@@ -488,7 +578,7 @@ export function useHasUnsavedChanges(): boolean {
       state.content !== state.currentRecord.content ||
       state.title !== (state.currentRecord.title ?? '') ||
       JSON.stringify(state.tags) !== JSON.stringify(state.currentRecord.tags) ||
-      state.folderId !== state.currentRecord.folder_id
+      state.folderId !== ((state.currentRecord.metadata.folder as string) ?? null)
     );
   });
 }

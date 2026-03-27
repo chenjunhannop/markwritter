@@ -27,7 +27,7 @@ export class ApiError extends Error {
 /**
  * Create an ApiError from a failed Response.
  */
-async function createApiError(response: Response): Promise<ApiError> {
+export async function createApiError(response: Response): Promise<ApiError> {
   let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
   try {
     const body = await response.text();
@@ -52,7 +52,7 @@ export async function sendMessage(
   content: string,
   signal?: AbortSignal
 ): Promise<Response> {
-  const response = await fetch(`${API_BASE}/api/chat/message`, {
+  const response = await fetch(`${API_BASE}/api/v1/chat/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ message: content }),
@@ -73,7 +73,7 @@ export async function sendMessage(
  * @throws ApiError if the request fails
  */
 export async function getSkills(): Promise<Skill[]> {
-  const response = await fetch(`${API_BASE}/api/skills`, {
+  const response = await fetch(`${API_BASE}/api/v1/skills/`, {
     method: 'GET',
   });
 
@@ -93,7 +93,7 @@ export async function getSkills(): Promise<Skill[]> {
  */
 export async function getSkill(name: string): Promise<Skill> {
   const encodedName = encodeURIComponent(name);
-  const response = await fetch(`${API_BASE}/api/skills/${encodedName}`, {
+  const response = await fetch(`${API_BASE}/api/v1/skills/${encodedName}`, {
     method: 'GET',
   });
 
@@ -119,7 +119,7 @@ export async function executeSkill(
   const encodedName = encodeURIComponent(name);
   const requestBody: SkillRunRequest = { params };
 
-  const response = await fetch(`${API_BASE}/api/skills/${encodedName}/execute`, {
+  const response = await fetch(`${API_BASE}/api/v1/skills/${encodedName}/run`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(requestBody),
@@ -156,7 +156,7 @@ export interface SettingsUpdateResponse {
  * @throws ApiError if the request fails
  */
 export async function getSettings(): Promise<AppSettings> {
-  const response = await fetch(`${API_BASE}/api/settings`, {
+  const response = await fetch(`${API_BASE}/api/v1/settings`, {
     method: 'GET',
   });
 
@@ -177,7 +177,7 @@ export async function getSettings(): Promise<AppSettings> {
 export async function updateSettings(
   settings: Partial<AppSettings>
 ): Promise<SettingsUpdateResponse> {
-  const response = await fetch(`${API_BASE}/api/settings`, {
+  const response = await fetch(`${API_BASE}/api/v1/settings`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(settings),

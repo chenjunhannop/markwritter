@@ -4,38 +4,10 @@
  * Provides functions for knowledge graph operations.
  */
 
+import { ApiError, createApiError } from './api';
+
 // API base URL from environment variable
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-
-/**
- * Custom error class for API errors.
- * Contains HTTP status code and response body.
- */
-export class ApiError extends Error {
-  public readonly status: number;
-
-  constructor(status: number, message: string) {
-    super(message);
-    this.name = 'ApiError';
-    this.status = status;
-  }
-}
-
-/**
- * Create an ApiError from a failed Response.
- */
-async function createApiError(response: Response): Promise<ApiError> {
-  let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-  try {
-    const body = await response.text();
-    if (body) {
-      errorMessage = `${response.status}: ${body}`;
-    }
-  } catch {
-    // Ignore parsing errors
-  }
-  return new ApiError(response.status, errorMessage);
-}
 
 // ==================== Types ====================
 

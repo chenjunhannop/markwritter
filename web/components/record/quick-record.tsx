@@ -48,7 +48,7 @@ export function QuickRecord({
       const state = useRecordStore.getState();
       if (state.currentRecord && !state.saveError) {
         if (redirectAfterSave) {
-          router.push(`/record?id=${state.currentRecord.id}`);
+          router.push(`/note?path=${encodeURIComponent(state.currentRecord.path)}`);
         }
         clearRecord();
       }

@@ -105,18 +105,39 @@ describe('QuickRecord', () => {
       expect(mockState.saveRecord).toHaveBeenCalled();
     });
 
-    it('should clear form after save', async () => {
+    it('should redirect with path after save', async () => {
       const user = userEvent.setup();
       mockState.content = 'Test note';
       mockState.currentRecord = {
-        id: 'record-1',
+        path: 'test-note.md',
         title: 'Test',
         content: 'Test note',
-        folder_id: null,
+        metadata: {},
         tags: [],
-        aliases: [],
-        created_at: '2024-01-01T00:00:00Z',
-        updated_at: '2024-01-01T00:00:00Z',
+        links: [],
+        backlinks: [],
+      };
+
+      render(<QuickRecord />);
+
+      const button = screen.getByRole('button', { name: /save/i });
+      await user.click(button);
+
+      expect(mockState.saveRecord).toHaveBeenCalled();
+      expect(mockPush).toHaveBeenCalledWith('/note?path=test-note.md');
+    });
+
+    it('should not redirect when redirectAfterSave is false', async () => {
+      const user = userEvent.setup();
+      mockState.content = 'Test note';
+      mockState.currentRecord = {
+        path: 'test-note.md',
+        title: 'Test',
+        content: 'Test note',
+        metadata: {},
+        tags: [],
+        links: [],
+        backlinks: [],
       };
 
       render(<QuickRecord redirectAfterSave={false} />);
@@ -125,6 +146,7 @@ describe('QuickRecord', () => {
       await user.click(button);
 
       expect(mockState.saveRecord).toHaveBeenCalled();
+      expect(mockPush).not.toHaveBeenCalled();
     });
 
     it('should disable submit when empty', () => {

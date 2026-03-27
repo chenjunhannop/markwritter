@@ -45,7 +45,7 @@ describe('API Client', () => {
   });
 
   describe('sendMessage', () => {
-    it('should send a POST request to /api/chat/message', async () => {
+    it('should send a POST request to /api/v1/chat/', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
@@ -60,7 +60,7 @@ describe('API Client', () => {
       await sendMessage('Hello, world!');
 
       expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:8000/api/chat/message',
+        'http://localhost:8000/api/v1/chat/',
         expect.objectContaining({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -148,7 +148,7 @@ describe('API Client', () => {
   });
 
   describe('getSkills', () => {
-    it('should fetch skills from /api/skills', async () => {
+    it('should fetch skills from /api/v1/skills/', async () => {
       const mockSkills = [
         { name: 'skill1', description: 'Skill 1', version: '1.0.0' },
         { name: 'skill2', description: 'Skill 2', version: '1.0.0' },
@@ -162,7 +162,7 @@ describe('API Client', () => {
       const result = await getSkills();
 
       expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:8000/api/skills',
+        'http://localhost:8000/api/v1/skills/',
         expect.objectContaining({
           method: 'GET',
         })
@@ -211,7 +211,7 @@ describe('API Client', () => {
       const result = await getSkill('translate');
 
       expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:8000/api/skills/translate',
+        'http://localhost:8000/api/v1/skills/translate',
         expect.objectContaining({
           method: 'GET',
         })
@@ -242,7 +242,7 @@ describe('API Client', () => {
       await getSkill('my skill');
 
       expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:8000/api/skills/my%20skill',
+        'http://localhost:8000/api/v1/skills/my%20skill',
         expect.any(Object)
       );
     });
@@ -264,7 +264,7 @@ describe('API Client', () => {
       const result = await executeSkill('translate', { text: 'Hello', target: 'es' });
 
       expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:8000/api/skills/translate/execute',
+        'http://localhost:8000/api/v1/skills/translate/run',
         expect.objectContaining({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -321,7 +321,7 @@ describe('API Client', () => {
   });
 
   describe('getSettings', () => {
-    it('should fetch settings from /api/settings', async () => {
+    it('should fetch settings from /api/v1/settings', async () => {
       const mockSettings = {
         theme: 'dark',
         language: 'en',
@@ -336,7 +336,7 @@ describe('API Client', () => {
       const result = await getSettings();
 
       expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:8000/api/settings',
+        'http://localhost:8000/api/v1/settings',
         expect.objectContaining({
           method: 'GET',
         })
@@ -357,7 +357,7 @@ describe('API Client', () => {
   });
 
   describe('updateSettings', () => {
-    it('should update settings via PUT to /api/settings', async () => {
+    it('should update settings via PUT to /api/v1/settings', async () => {
       const newSettings = { theme: 'light' as const };
       const mockResponse = {
         success: true,
@@ -372,7 +372,7 @@ describe('API Client', () => {
       const result = await updateSettings(newSettings);
 
       expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:8000/api/settings',
+        'http://localhost:8000/api/v1/settings',
         expect.objectContaining({
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
