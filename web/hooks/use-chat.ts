@@ -52,6 +52,8 @@ export function useChat(): UseChatReturn {
   const getCurrentSession = useChatStore((state) => state.getCurrentSession);
   const currentSessionId = useChatStore((state) => state.currentSessionId);
   const storeIsStreaming = useChatStore((state) => state.isStreaming);
+  const selectedSources = useChatStore((state) => state.selectedSources);
+  const updateSessionTitle = useChatStore((state) => state.updateSessionTitle);
 
   // Local state
   const [currentResponse, setCurrentResponse] = useState('');
@@ -173,6 +175,14 @@ export function useChat(): UseChatReturn {
 
       // Add user message
       addMessage('user', trimmed);
+
+      // Auto-title session on first user message
+      const session = getCurrentSession();
+      if (session && session.messages.length === 0) {
+        const autoTitle = trimmed.length > 50 ? trimmed.slice(0, 50) + '...' : trimmed;
+        updateSessionTitle(session.id, autoTitle);
+      }
+
       setStreaming(true);
       setIsThinking(false);
 
@@ -185,7 +195,18 @@ export function useChat(): UseChatReturn {
       pendingMessageIdRef.current = messageId;
 
       try {
-        const response = await apiSendMessage(trimmed, abortControllerRef.current.signal);
+        // Build conversation history from session messages
+        const currentMessages = useChatStore.getState().getCurrentSession()?.messages ?? [];
+        const conversationHistory = currentMessages.map((m) => ({
+          role: m.role as 'user' | 'assistant',
+          content: m.content,
+        }));
+
+        const response = await apiSendMessage(trimmed, {
+          sources: selectedSources.length > 0 ? selectedSources : undefined,
+          conversationHistory: conversationHistory.length > 0 ? conversationHistory : undefined,
+          signal: abortControllerRef.current.signal,
+        });
 
         // Start the buffer tick loop BEFORE processing SSE stream
         // This ensures text is revealed progressively (typewriter effect)
@@ -238,6 +259,9 @@ export function useChat(): UseChatReturn {
       addMessage,
       setStreaming,
       createStreamBuffer,
+      selectedSources,
+      getCurrentSession,
+      updateSessionTitle,
     ]
   );
 

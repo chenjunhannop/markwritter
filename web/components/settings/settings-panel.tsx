@@ -9,7 +9,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   useSettingsStore,
   type Theme,
@@ -56,10 +56,8 @@ export function VaultConfig({ className }: VaultConfigProps) {
     try {
       // Check if File System Access API is available
       if ('showDirectoryPicker' in window) {
-        const dirHandle = await window.showDirectoryPicker({
-          mode: 'readwrite',
-        });
-        const path = (dirHandle as unknown as { name: string }).name;
+        const dirHandle = await (window as unknown as { showDirectoryPicker: () => Promise<{ name: string }> }).showDirectoryPicker();
+        const path = dirHandle.name;
         setVaultPath(path);
         setLocalPath(path);
       } else {
@@ -359,11 +357,24 @@ interface SettingsPanelProps {
 }
 
 export function SettingsPanel({ className }: SettingsPanelProps) {
-  const { error, clearError } = useSettingsStore();
+  const { error, clearError, isLoading, fetchSettings } = useSettingsStore();
+
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
 
   return (
     <div className={className}>
       <h1 className="text-2xl font-bold mb-6">Settings</h1>
+
+      {/* Loading State */}
+      {isLoading && (
+        <div className="space-y-6 animate-pulse">
+          <div className="h-32 rounded-lg bg-muted" />
+          <div className="h-48 rounded-lg bg-muted" />
+          <div className="h-32 rounded-lg bg-muted" />
+        </div>
+      )}
 
       {/* Error Display */}
       {error && (
@@ -375,22 +386,24 @@ export function SettingsPanel({ className }: SettingsPanelProps) {
         </div>
       )}
 
-      <div className="space-y-6">
-        {/* Vault Configuration */}
-        <section>
-          <VaultConfig />
-        </section>
+      {!isLoading && (
+        <div className="space-y-6">
+          {/* Vault Configuration */}
+          <section>
+            <VaultConfig />
+          </section>
 
-        {/* LLM Configuration */}
-        <section>
-          <LLMConfig />
-        </section>
+          {/* LLM Configuration */}
+          <section>
+            <LLMConfig />
+          </section>
 
-        {/* General Settings */}
-        <section>
-          <GeneralConfig />
-        </section>
-      </div>
+          {/* General Settings */}
+          <section>
+            <GeneralConfig />
+          </section>
+        </div>
+      )}
     </div>
   );
 }

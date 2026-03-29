@@ -32,7 +32,7 @@ const mockSkills = [
 test.describe('Skills Page', () => {
   test.describe('Page Load', () => {
     test('should load skills page successfully', async ({ skillsPage }) => {
-      await skillsPage.page.route('**/api/skills', async (route) => {
+      await skillsPage.page.route('**/api/v1/skills/**', async (route) => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -47,7 +47,7 @@ test.describe('Skills Page', () => {
     });
 
     test('should display page title', async ({ skillsPage }) => {
-      await skillsPage.page.route('**/api/skills', async (route) => {
+      await skillsPage.page.route('**/api/v1/skills/**', async (route) => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -66,7 +66,7 @@ test.describe('Skills Page', () => {
     });
 
     test('should display New Skill button', async ({ skillsPage }) => {
-      await skillsPage.page.route('**/api/skills', async (route) => {
+      await skillsPage.page.route('**/api/v1/skills/**', async (route) => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -85,7 +85,7 @@ test.describe('Skills Page', () => {
   test.describe('Skills List', () => {
     test('should display skills from API', async ({ skillsPage }) => {
       // Mock the skills API
-      await skillsPage.page.route('**/api/skills', async (route) => {
+      await skillsPage.page.route('**/api/v1/skills/**', async (route) => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -105,7 +105,7 @@ test.describe('Skills Page', () => {
     });
 
     test('should display skill card with correct information', async ({ skillsPage }) => {
-      await skillsPage.page.route('**/api/skills', async (route) => {
+      await skillsPage.page.route('**/api/v1/skills/**', async (route) => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -124,7 +124,7 @@ test.describe('Skills Page', () => {
 
   test.describe('Search Functionality', () => {
     test('should have search input', async ({ skillsPage }) => {
-      await skillsPage.page.route('**/api/skills', async (route) => {
+      await skillsPage.page.route('**/api/v1/skills/**', async (route) => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -140,7 +140,7 @@ test.describe('Skills Page', () => {
     });
 
     test('should filter skills by search query', async ({ skillsPage }) => {
-      await skillsPage.page.route('**/api/skills', async (route) => {
+      await skillsPage.page.route('**/api/v1/skills/**', async (route) => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -168,7 +168,7 @@ test.describe('Skills Page', () => {
   test.describe('Error Handling', () => {
     test('should display error message when API fails', async ({ page }) => {
       // Set up route BEFORE navigating
-      await page.route('**/api/skills', async (route) => {
+      await page.route('**/api/v1/skills/**', async (route) => {
         await route.fulfill({
           status: 500,
           body: 'Internal Server Error',
@@ -187,7 +187,7 @@ test.describe('Skills Page', () => {
     test.skip('should have retry button on error', async ({ page }) => {
       let callCount = 0;
 
-      await page.route('**/api/skills', async (route) => {
+      await page.route('**/api/v1/skills/**', async (route) => {
         callCount++;
         if (callCount === 1) {
           await route.fulfill({
@@ -224,7 +224,7 @@ test.describe('Skills Page', () => {
   test.describe('Empty State', () => {
     // Skip this test due to SSR + API mock timing issues
     test.skip('should show empty state when no skills', async ({ page }) => {
-      await page.route('**/api/skills', async (route) => {
+      await page.route('**/api/v1/skills/**', async (route) => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',

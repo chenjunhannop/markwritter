@@ -114,7 +114,7 @@ describe('API Client', () => {
         },
       });
 
-      await sendMessage('Test', controller.signal);
+      await sendMessage('Test', { signal: controller.signal });
 
       expect(mockFetch).toHaveBeenCalledWith(
         expect.any(String),

@@ -29,6 +29,10 @@ interface MessageInputProps {
   autoFocus?: boolean;
   /** Placeholder text */
   placeholder?: string;
+  /** Number of selected sources */
+  selectedSourceCount?: number;
+  /** Callback to clear source selection */
+  onClearSources?: () => void;
   /** Additional class names */
   className?: string;
 }

@@ -9,12 +9,12 @@ import {
   getKnowledgeGraph,
   getNodeGraph,
   getRelatedNotes,
-  ApiError,
   type GraphData,
   type GraphNode,
   type GraphEdge,
   type RelatedNote,
 } from './explore-api';
+import { ApiError } from './api';
 
 // ==================== Types ====================
 

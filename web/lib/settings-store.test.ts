@@ -59,6 +59,14 @@ Object.defineProperty(window, 'crypto', {
   value: mockCrypto,
 });
 
+// Mock API module BEFORE importing settings store
+const mockGetSettings = vi.fn();
+const mockUpdateSettings = vi.fn();
+vi.mock('@/lib/api', () => ({
+  getSettings: (...args: unknown[]) => mockGetSettings(...args),
+  updateSettings: (...args: unknown[]) => mockUpdateSettings(...args),
+}));
+
 // Import after mocks are set up
 import { useSettingsStore, type AppSettings, clearEncryptionKeyCache } from './settings-store';
 
@@ -560,6 +568,268 @@ describe('useSettingsStore', () => {
 
       // Settings should be persisted (via zustand persist middleware)
       expect(localStorageMock.setItem).toHaveBeenCalled();
+    });
+  });
+
+  // ==================== Backend Sync: fetchSettings ====================
+
+  describe('fetchSettings', () => {
+    it('should call getSettings API and update store with remote values', async () => {
+      mockGetSettings.mockResolvedValueOnce({
+        theme: 'dark',
+        language: 'zh',
+      });
+
+      const store = useSettingsStore.getState();
+
+      await act(async () => {
+        await store.fetchSettings();
+      });
+
+      expect(mockGetSettings).toHaveBeenCalledOnce();
+      expect(useSettingsStore.getState().theme).toBe('dark');
+      expect(useSettingsStore.getState().language).toBe('zh');
+    });
+
+    it('should set isLoading to true during fetch and false after', async () => {
+      let resolvePromise: (value: unknown) => void;
+      mockGetSettings.mockReturnValueOnce(
+        new Promise((resolve) => {
+          resolvePromise = resolve;
+        })
+      );
+
+      const fetchPromise = act(async () => {
+        await useSettingsStore.getState().fetchSettings();
+      });
+
+      // While request is in flight, isLoading should be true
+      expect(useSettingsStore.getState().isLoading).toBe(true);
+
+      resolvePromise!({ theme: 'light', language: 'en' });
+      await fetchPromise;
+
+      expect(useSettingsStore.getState().isLoading).toBe(false);
+    });
+
+    it('should handle API errors gracefully and set error state', async () => {
+      mockGetSettings.mockRejectedValueOnce(new Error('Network error'));
+
+      const store = useSettingsStore.getState();
+
+      await act(async () => {
+        await store.fetchSettings();
+      });
+
+      expect(useSettingsStore.getState().error).toBe('Network error');
+      expect(useSettingsStore.getState().isLoading).toBe(false);
+    });
+
+    it('should handle non-Error exceptions in fetchSettings', async () => {
+      mockGetSettings.mockRejectedValueOnce('unknown error string');
+
+      const store = useSettingsStore.getState();
+
+      await act(async () => {
+        await store.fetchSettings();
+      });
+
+      expect(useSettingsStore.getState().error).toBe('Failed to fetch settings');
+      expect(useSettingsStore.getState().isLoading).toBe(false);
+    });
+
+    it('should clear error state when fetchSettings succeeds', async () => {
+      useSettingsStore.setState({ error: 'previous error' });
+
+      mockGetSettings.mockResolvedValueOnce({
+        theme: 'dark',
+        language: 'ja',
+      });
+
+      await act(async () => {
+        await useSettingsStore.getState().fetchSettings();
+      });
+
+      expect(useSettingsStore.getState().error).toBeNull();
+    });
+
+    it('should not overwrite local state when remote returns no valid values', async () => {
+      useSettingsStore.setState({ theme: 'dark', language: 'zh' });
+
+      mockGetSettings.mockResolvedValueOnce({});
+
+      await act(async () => {
+        await useSettingsStore.getState().fetchSettings();
+      });
+
+      // Local state should remain unchanged since remote had no theme/language
+      expect(useSettingsStore.getState().theme).toBe('dark');
+      expect(useSettingsStore.getState().language).toBe('zh');
+    });
+  });
+
+  // ==================== Backend Sync: syncSettings ====================
+
+  describe('syncSettings', () => {
+    it('should call updateSettings API with current store values', async () => {
+      mockUpdateSettings.mockResolvedValueOnce({
+        success: true,
+        settings: { theme: 'dark', language: 'zh' },
+      });
+
+      useSettingsStore.setState({ theme: 'dark', language: 'zh' });
+
+      const store = useSettingsStore.getState();
+
+      await act(async () => {
+        await store.syncSettings();
+      });
+
+      expect(mockUpdateSettings).toHaveBeenCalledOnce();
+      expect(mockUpdateSettings).toHaveBeenCalledWith({
+        theme: 'dark',
+        language: 'zh',
+      });
+    });
+
+    it('should set isSaving to true during sync and false after', async () => {
+      let resolvePromise: (value: unknown) => void;
+      mockUpdateSettings.mockReturnValueOnce(
+        new Promise((resolve) => {
+          resolvePromise = resolve;
+        })
+      );
+
+      const syncPromise = act(async () => {
+        await useSettingsStore.getState().syncSettings();
+      });
+
+      expect(useSettingsStore.getState().isSaving).toBe(true);
+
+      resolvePromise!({ success: true, settings: {} });
+      await syncPromise;
+
+      expect(useSettingsStore.getState().isSaving).toBe(false);
+    });
+
+    it('should handle API errors gracefully', async () => {
+      mockUpdateSettings.mockRejectedValueOnce(new Error('Server error'));
+
+      const store = useSettingsStore.getState();
+
+      await act(async () => {
+        await store.syncSettings();
+      });
+
+      expect(useSettingsStore.getState().error).toBe('Server error');
+      expect(useSettingsStore.getState().isSaving).toBe(false);
+    });
+
+    it('should handle non-Error exceptions in syncSettings', async () => {
+      mockUpdateSettings.mockRejectedValueOnce('unknown error');
+
+      const store = useSettingsStore.getState();
+
+      await act(async () => {
+        await store.syncSettings();
+      });
+
+      expect(useSettingsStore.getState().error).toBe('Failed to save settings');
+      expect(useSettingsStore.getState().isSaving).toBe(false);
+    });
+
+    it('should NOT send vaultPath or apiKey to backend', async () => {
+      mockUpdateSettings.mockResolvedValueOnce({
+        success: true,
+        settings: {},
+      });
+
+      useSettingsStore.setState({
+        vaultPath: '/secret/path',
+        apiKey: 'sk-secret-key',
+        theme: 'dark',
+        language: 'en',
+      });
+
+      await act(async () => {
+        await useSettingsStore.getState().syncSettings();
+      });
+
+      const callArgs = mockUpdateSettings.mock.calls[0][0] as Record<string, unknown>;
+      expect(callArgs).not.toHaveProperty('vaultPath');
+      expect(callArgs).not.toHaveProperty('apiKey');
+      expect(callArgs).toHaveProperty('theme');
+      expect(callArgs).toHaveProperty('language');
+    });
+  });
+
+  // ==================== Backend Sync: setters trigger sync ====================
+
+  describe('setters trigger syncSettings', () => {
+    beforeEach(() => {
+      // Default: syncSettings succeeds
+      mockUpdateSettings.mockResolvedValue({
+        success: true,
+        settings: {},
+      });
+    });
+
+    it('setTheme should update local state and call syncSettings', async () => {
+      const store = useSettingsStore.getState();
+
+      await act(async () => {
+        store.setTheme('dark');
+      });
+
+      expect(useSettingsStore.getState().theme).toBe('dark');
+      // syncSettings is fire-and-forget, but mockUpdateSettings should be called
+      // Wait a tick for the async call
+      await vi.waitFor(() => {
+        expect(mockUpdateSettings).toHaveBeenCalledWith(
+          expect.objectContaining({ theme: 'dark' })
+        );
+      });
+    });
+
+    it('setLanguage should update local state and call syncSettings', async () => {
+      const store = useSettingsStore.getState();
+
+      await act(async () => {
+        store.setLanguage('zh');
+      });
+
+      expect(useSettingsStore.getState().language).toBe('zh');
+      await vi.waitFor(() => {
+        expect(mockUpdateSettings).toHaveBeenCalledWith(
+          expect.objectContaining({ language: 'zh' })
+        );
+      });
+    });
+
+    it('setVaultPath should update local state and call syncSettings', async () => {
+      const store = useSettingsStore.getState();
+
+      await act(async () => {
+        store.setVaultPath('/Users/test/Vault');
+      });
+
+      expect(useSettingsStore.getState().vaultPath).toBe('/Users/test/Vault');
+      await vi.waitFor(() => {
+        expect(mockUpdateSettings).toHaveBeenCalled();
+      });
+    });
+
+    it('setLLMModel should update local state and call syncSettings', async () => {
+      const store = useSettingsStore.getState();
+
+      await act(async () => {
+        store.setLLMModel('claude-3-opus');
+      });
+
+      expect(useSettingsStore.getState().llmModel).toBe('claude-3-opus');
+      await vi.waitFor(() => {
+        expect(mockUpdateSettings).toHaveBeenCalled();
+      });
     });
   });
 });

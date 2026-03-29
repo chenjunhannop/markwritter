@@ -1,6 +1,6 @@
 'use client';
 
-import { MessageSquare, Boxes, FileText, Settings } from 'lucide-react';
+import { MessageSquare, Boxes, FileText, Settings, GitGraph, Search, FileEdit } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -18,6 +18,9 @@ interface NavItemConfig {
 const navItems: NavItemConfig[] = [
   { id: 'chat', label: 'Chat', icon: MessageSquare, path: '/chat' },
   { id: 'skills', label: 'Skills', icon: Boxes, path: '/skills' },
+  { id: 'explore', label: 'Explore', icon: GitGraph, path: '/explore' },
+  { id: 'query', label: 'Query', icon: Search, path: '/query' },
+  { id: 'record', label: 'Record', icon: FileEdit, path: '/record' },
   { id: 'logs', label: 'Logs', icon: FileText, path: '/logs' },
   { id: 'settings', label: 'Settings', icon: Settings, path: '/settings' },
 ];

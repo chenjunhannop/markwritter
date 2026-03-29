@@ -12,7 +12,7 @@ test.describe('Chat Page', () => {
       await chatPage.goto();
 
       // Verify page is loaded
-      await expect(chatPage.page).toHaveURL('/');
+      await expect(chatPage.page).toHaveURL('/chat');
     });
 
     test('should display message input area', async ({ chatPage }) => {
@@ -26,8 +26,8 @@ test.describe('Chat Page', () => {
     test('should display empty state when no messages', async ({ chatPage }) => {
       await chatPage.goto();
 
-      // Should show empty state
-      const emptyState = chatPage.page.getByText('No messages yet');
+      // Should show empty state - "Start a conversation"
+      const emptyState = chatPage.page.getByText('Start a conversation');
       const isVisible = await emptyState.isVisible().catch(() => false);
       expect(isVisible).toBe(true);
     });
@@ -128,27 +128,26 @@ test.describe('Chat Page', () => {
   });
 
   test.describe('Layout Integration', () => {
-    test('should display sidebar on chat page', async ({ chatPage }) => {
+    test('should display three-panel layout on chat page', async ({ chatPage }) => {
       await chatPage.goto();
 
-      // Sidebar should be visible
-      const sidebar = chatPage.page.locator('nav');
-      await expect(sidebar).toBeVisible();
+      // Chat page uses ChatLayout with 3 panels: Sources | Chat | Studio
+      const main = chatPage.page.locator('main').first();
+      await expect(main).toBeVisible({ timeout: 10000 });
     });
 
-    test('should display header with title', async ({ chatPage }) => {
+    test('should display TopBar with brand name', async ({ chatPage }) => {
       await chatPage.goto();
 
       // Wait for page to load
       await chatPage.page.waitForLoadState('load');
 
-      // Header should be visible
-      const header = chatPage.page.locator('header');
-      await expect(header).toBeVisible({ timeout: 10000 });
+      // TopBar header should be visible
+      const topBar = chatPage.page.locator('header').first();
+      await expect(topBar).toBeVisible({ timeout: 10000 });
 
-      // Title should contain "Chat"
-      const title = header.locator('h1');
-      await expect(title).toContainText('Chat');
+      // TopBar contains "Markwritter" brand
+      await expect(topBar.getByText('Markwritter')).toBeVisible();
     });
   });
 });

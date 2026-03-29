@@ -49,6 +49,8 @@ const mockStore = {
   importSettings: vi.fn(),
   setError: vi.fn(),
   clearError: vi.fn(),
+  fetchSettings: vi.fn(),
+  syncSettings: vi.fn(),
   getAvailableModels: vi.fn(() => [
     'gpt-4',
     'gpt-3.5-turbo',

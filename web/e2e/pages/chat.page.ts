@@ -5,11 +5,17 @@
  */
 
 import type { Page, Locator, Response } from '@playwright/test';
-import { BasePage, SidebarComponent, HeaderComponent } from './base.page';
+import { BasePage } from './base.page';
 
 export class ChatPage extends BasePage {
-  readonly sidebar: SidebarComponent;
-  readonly header: HeaderComponent;
+  // TopBar elements
+  readonly topBar: Locator;
+  readonly drawerMenuButton: Locator;
+
+  // Panel elements
+  readonly sourcesPanel: Locator;
+  readonly chatPanel: Locator;
+  readonly studioPanel: Locator;
 
   // Message input elements
   readonly messageInput: Locator;
@@ -30,8 +36,15 @@ export class ChatPage extends BasePage {
 
   constructor(page: Page) {
     super(page);
-    this.sidebar = new SidebarComponent(page);
-    this.header = new HeaderComponent(page);
+
+    // TopBar
+    this.topBar = page.locator('header').first();
+    this.drawerMenuButton = this.topBar.getByRole('button', { name: '' }).first();
+
+    // Panels (3-panel layout: Sources | Chat | Studio)
+    this.sourcesPanel = page.locator('aside').first();
+    this.chatPanel = page.locator('main').first();
+    this.studioPanel = page.locator('aside').last();
 
     // Message input - based on actual MessageInput component
     // Use textarea with placeholder text as fallback
@@ -44,11 +57,11 @@ export class ChatPage extends BasePage {
     this.userMessages = page.locator('[data-testid="user-message"]').or(page.getByTestId('user-message'));
     this.assistantMessages = page.locator('[data-testid="assistant-message"]').or(page.getByTestId('assistant-message'));
 
-    // Sessions
-    this.newChatButton = page.getByRole('button', { name: /new.*chat/i });
+    // Sessions - New chat button (Plus icon with title="New chat")
+    this.newChatButton = page.getByTitle('New chat');
 
     // Empty state from ChatArea component
-    this.emptyState = page.locator('text=No messages yet').or(page.getByText('No messages yet'));
+    this.emptyState = page.getByText('Start a conversation');
 
     // Thinking indicator
     this.thinkingIndicator = page.locator('text=Thinking');

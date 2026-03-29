@@ -1,10 +1,10 @@
-import { MainLayout } from "@/components/layout";
-import { ChatArea } from "@/components/chat/chat-area";
+import { ChatLayout } from '@/components/chat/chat-layout';
+import { ChatArea } from '@/components/chat/chat-area';
 
 export default function ChatPage() {
   return (
-    <MainLayout title="Chat">
+    <ChatLayout>
       <ChatArea />
-    </MainLayout>
+    </ChatLayout>
   );
 }

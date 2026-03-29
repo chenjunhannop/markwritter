@@ -6,6 +6,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useExploreStore } from './explore-store';
+import { ApiError } from './api';
 import type { GraphData, GraphNode, GraphEdge, RelatedNote } from './explore-api';
 import * as exploreApi from './explore-api';
 
@@ -99,7 +100,7 @@ describe('Explore Store', () => {
     });
 
     it('should handle fetch errors', async () => {
-      const error = new exploreApi.ApiError(503, 'Vault not configured');
+      const error = new ApiError(503, 'Vault not configured');
       vi.mocked(exploreApi.getKnowledgeGraph).mockRejectedValueOnce(error);
 
       const { fetchGraph } = useExploreStore.getState();
@@ -160,7 +161,7 @@ describe('Explore Store', () => {
     });
 
     it('should handle node not found error', async () => {
-      const error = new exploreApi.ApiError(404, 'Note not found');
+      const error = new ApiError(404, 'Note not found');
       vi.mocked(exploreApi.getNodeGraph).mockRejectedValueOnce(error);
 
       const { selectNode } = useExploreStore.getState();
@@ -235,7 +236,7 @@ describe('Explore Store', () => {
     });
 
     it('should handle fetch errors', async () => {
-      const error = new exploreApi.ApiError(404, 'Note not found');
+      const error = new ApiError(404, 'Note not found');
       vi.mocked(exploreApi.getRelatedNotes).mockRejectedValueOnce(error);
 
       const { fetchRelatedNotes } = useExploreStore.getState();

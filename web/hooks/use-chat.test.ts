@@ -35,21 +35,35 @@ const mockSelectSession = vi.fn();
 const mockDeleteSession = vi.fn();
 
 vi.mock('@/lib/store', () => ({
-  useChatStore: vi.fn((selector) => {
-    const state = {
-      addMessage: mockAddMessage,
-      updateMessage: mockUpdateMessage,
-      setStreaming: mockSetStreaming,
-      getCurrentSession: mockGetCurrentSession,
-      currentSessionId: 'test-session-id',
-      isStreaming: false,
-      sessions: [],
-      createSession: mockCreateSession,
-      selectSession: mockSelectSession,
-      deleteSession: mockDeleteSession,
-    };
-    return selector(state);
-  }),
+  useChatStore: Object.assign(
+    vi.fn((selector) => {
+      const state = {
+        addMessage: mockAddMessage,
+        updateMessage: mockUpdateMessage,
+        setStreaming: mockSetStreaming,
+        getCurrentSession: mockGetCurrentSession,
+        currentSessionId: 'test-session-id',
+        isStreaming: false,
+        sessions: [],
+        createSession: mockCreateSession,
+        selectSession: mockSelectSession,
+        deleteSession: mockDeleteSession,
+        selectedSources: [],
+        updateSessionTitle: vi.fn(),
+        toggleSource: vi.fn(),
+        addSources: vi.fn(),
+        removeSources: vi.fn(),
+        clearSources: vi.fn(),
+      };
+      return selector(state);
+    }),
+    {
+      getState: () => ({
+        getCurrentSession: mockGetCurrentSession,
+        selectedSources: [],
+      }),
+    }
+  ),
 }));
 
 describe('useChat Hook', () => {
@@ -140,8 +154,16 @@ describe('useChat Hook', () => {
         await promise;
       });
 
-      // Should have added assistant message with accumulated text
-      expect(mockAddMessage).toHaveBeenCalledWith('assistant', 'Hello world!');
+      // Should have added both user and assistant messages
+      expect(mockAddMessage).toHaveBeenCalledWith('user', 'Test');
+      // Assistant message is added via StreamBuffer completion
+      // Check that addMessage was called at least twice (user + assistant)
+      expect(mockAddMessage.mock.calls.length).toBeGreaterThanOrEqual(2);
+      const assistantCall = mockAddMessage.mock.calls.find(
+        (call: unknown[]) => call[0] === 'assistant'
+      );
+      expect(assistantCall).toBeDefined();
+      expect(assistantCall[1]).toBe('Hello world!');
     });
 
     it('should handle error events', async () => {
@@ -196,6 +218,12 @@ describe('useChat Hook', () => {
           createSession: mockCreateSession,
           selectSession: mockSelectSession,
           deleteSession: mockDeleteSession,
+      selectedSources: [],
+      updateSessionTitle: vi.fn(),
+      toggleSource: vi.fn(),
+      addSources: vi.fn(),
+      removeSources: vi.fn(),
+      clearSources: vi.fn(),
         };
         return selector(state);
       });
@@ -221,6 +249,12 @@ describe('useChat Hook', () => {
           createSession: mockCreateSession,
           selectSession: mockSelectSession,
           deleteSession: mockDeleteSession,
+      selectedSources: [],
+      updateSessionTitle: vi.fn(),
+      toggleSource: vi.fn(),
+      addSources: vi.fn(),
+      removeSources: vi.fn(),
+      clearSources: vi.fn(),
         };
         return selector(state);
       });
@@ -270,7 +304,11 @@ describe('useChat Hook', () => {
 
       // buffer.start() should be called before processSSEStream
       // so text is revealed progressively
-      expect(mockAddMessage).toHaveBeenCalledWith('assistant', 'Hello');
+      const assistantCall = mockAddMessage.mock.calls.find(
+        (call: unknown[]) => call[0] === 'assistant'
+      );
+      expect(assistantCall).toBeDefined();
+      expect(assistantCall[1]).toBe('Hello');
     });
   });
 
@@ -320,6 +358,12 @@ describe('useChat Hook', () => {
           createSession: mockCreateSession,
           selectSession: mockSelectSession,
           deleteSession: mockDeleteSession,
+      selectedSources: [],
+      updateSessionTitle: vi.fn(),
+      toggleSource: vi.fn(),
+      addSources: vi.fn(),
+      removeSources: vi.fn(),
+      clearSources: vi.fn(),
         };
         return selector(state);
       });

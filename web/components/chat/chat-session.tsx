@@ -193,10 +193,12 @@ function StreamingIndicator({ content }: { content: string }) {
  */
 function EmptyState() {
   return (
-    <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-      <Bot className="h-12 w-12 mb-4" />
-      <p>No messages yet</p>
-      <p className="text-sm">Start a conversation by sending a message</p>
+    <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-8">
+      <Bot className="h-12 w-12 mb-4 opacity-30" />
+      <p className="text-lg font-medium mb-1">Start a conversation</p>
+      <p className="text-sm text-center max-w-xs">
+        Select sources from the left panel or type a message below.
+      </p>
     </div>
   );
 }

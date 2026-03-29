@@ -64,6 +64,10 @@ interface SettingsActions {
   // Error handling
   setError: (error: string | null) => void;
   clearError: () => void;
+
+  // Backend sync
+  fetchSettings: () => Promise<void>;
+  syncSettings: () => Promise<void>;
 }
 
 export type SettingsStore = SettingsState & SettingsActions;
@@ -161,7 +165,7 @@ async function getEncryptionKey(): Promise<CryptoKey | null> {
       const encoder = new TextEncoder();
       const keyData = encoder.encode(keyMaterial);
 
-      const baseKey = await crypto.subtle.importKey('RAW', keyData, 'PBKDF2', false, [
+      const baseKey = await crypto.subtle.importKey('raw', keyData, 'PBKDF2', false, [
         'deriveBits',
         'deriveKey',
       ]);
@@ -351,11 +355,13 @@ export const useSettingsStore = create<SettingsStore>()(
       // Vault path
       setVaultPath: (path) => {
         set({ vaultPath: normalizePath(path), error: null });
+        get().syncSettings();
       },
 
       // LLM model
       setLLMModel: (model) => {
         set({ llmModel: model, error: null });
+        get().syncSettings();
       },
 
       getAvailableModels: () => {
@@ -419,6 +425,7 @@ export const useSettingsStore = create<SettingsStore>()(
       // Theme
       setTheme: (theme) => {
         set({ theme, error: null });
+        get().syncSettings();
       },
 
       toggleTheme: () => {
@@ -432,6 +439,7 @@ export const useSettingsStore = create<SettingsStore>()(
       // Language
       setLanguage: (language) => {
         set({ language, error: null });
+        get().syncSettings();
       },
 
       // Bulk operations
@@ -474,6 +482,43 @@ export const useSettingsStore = create<SettingsStore>()(
 
       importSettings: (settings) => {
         get().updateSettings(settings);
+      },
+
+      // Backend sync
+      fetchSettings: async () => {
+        set({ isLoading: true, error: null });
+        try {
+          const { getSettings } = await import('@/lib/api');
+          const remote = await getSettings();
+          const updates: Partial<SettingsState> = {};
+          if (remote.theme) updates.theme = remote.theme;
+          if (remote.language) updates.language = remote.language;
+          if (Object.keys(updates).length > 0) {
+            set(updates);
+          }
+        } catch (error) {
+          const msg = error instanceof Error ? error.message : 'Failed to fetch settings';
+          set({ error: msg });
+        } finally {
+          set({ isLoading: false });
+        }
+      },
+
+      syncSettings: async () => {
+        set({ isSaving: true });
+        try {
+          const { updateSettings } = await import('@/lib/api');
+          const state = get();
+          await updateSettings({
+            theme: state.theme,
+            language: state.language,
+          });
+        } catch (error) {
+          const msg = error instanceof Error ? error.message : 'Failed to save settings';
+          set({ error: msg });
+        } finally {
+          set({ isSaving: false });
+        }
       },
 
       // Error handling

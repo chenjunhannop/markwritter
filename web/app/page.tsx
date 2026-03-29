@@ -1,10 +1,5 @@
-import { MainLayout } from "@/components/layout";
-import { ChatArea } from "@/components/chat/chat-area";
+import { redirect } from 'next/navigation';
 
 export default function HomePage() {
-  return (
-    <MainLayout title="Chat">
-      <ChatArea />
-    </MainLayout>
-  );
+  redirect('/chat');
 }

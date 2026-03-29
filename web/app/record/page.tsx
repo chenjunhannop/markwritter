@@ -7,6 +7,7 @@
  */
 
 import { Suspense } from 'react';
+import { MainLayout } from '@/components/layout';
 import { NoteForm } from '@/components/record/note-form';
 import { QuickRecord } from '@/components/record/quick-record';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -50,7 +51,9 @@ function RecordContent() {
 export default function RecordPage() {
   return (
     <Suspense fallback={<div className="p-4">Loading...</div>}>
-      <RecordContent />
+      <MainLayout title="Record">
+        <RecordContent />
+      </MainLayout>
     </Suspense>
   );
 }

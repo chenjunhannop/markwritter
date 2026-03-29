@@ -47,7 +47,7 @@ describe('ChatSession Component', () => {
     it('should render empty state when no messages', () => {
       render(<ChatSession messages={[]} />);
 
-      expect(screen.getByText(/no messages yet/i)).toBeInTheDocument();
+      expect(screen.getByText(/start a conversation/i)).toBeInTheDocument();
     });
 
     it('should render user avatar for user messages', () => {

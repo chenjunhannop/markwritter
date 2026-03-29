@@ -124,6 +124,45 @@ export interface ChatEvent {
   sources?: StreamSource[];
 }
 
+// ==================== File Tree Types ====================
+
+/**
+ * Node in the vault file tree
+ */
+export interface TreeNode {
+  /** Display name (file or directory name) */
+  name: string;
+  /** Relative path from vault root */
+  path: string;
+  /** Node type */
+  type: 'file' | 'directory';
+  /** Number of .md files in directory (recursive, directory only) */
+  file_count?: number;
+  /** Child nodes (directory only) */
+  children?: TreeNode[];
+}
+
+/**
+ * Response from GET /api/v1/notes/tree
+ */
+export interface FileTreeResponse {
+  tree: TreeNode[];
+}
+
+// ==================== Source Reference Types ====================
+
+/**
+ * Reference to a source file used in chat context
+ */
+export interface SourceReference {
+  /** Vault-relative file path */
+  filePath: string;
+  /** File name */
+  fileName: string;
+  /** Relevant excerpt from the source */
+  excerpt?: string;
+}
+
 // ==================== Session Types ====================
 
 /**
@@ -136,10 +175,31 @@ export interface Session {
   title: string;
   /** Messages in the session */
   messages: Message[];
+  /** Vault-relative paths of selected source files */
+  selectedSources: string[];
   /** Creation timestamp (Unix milliseconds) */
   createdAt: number;
   /** Last update timestamp (Unix milliseconds) */
   updatedAt: number;
+}
+
+// ==================== Chat Request Types ====================
+
+/**
+ * Message in conversation history for multi-turn context
+ */
+export interface ConversationMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+/**
+ * Request body for POST /api/v1/chat/
+ */
+export interface ChatRequestBody {
+  message: string;
+  sources?: string[];
+  conversation_history?: ConversationMessage[];
 }
 
 // ==================== Intent Types ====================

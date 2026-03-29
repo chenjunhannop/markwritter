@@ -5,7 +5,7 @@
  * All functions use fetch and return typed responses.
  */
 
-import type { Skill, SkillRunRequest, SkillRunResponse } from './types';
+import type { Skill, SkillRunRequest, SkillRunResponse, ConversationMessage } from './types';
 
 // API base URL from environment variable
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -44,19 +44,33 @@ export async function createApiError(response: Response): Promise<ApiError> {
  * Send a chat message and return the Response for SSE streaming.
  *
  * @param content - The message content to send
- * @param signal - Optional AbortSignal for cancellation
+ * @param options - Optional parameters (sources, conversation history, abort signal)
  * @returns The Response object for SSE processing
  * @throws ApiError if the request fails
  */
 export async function sendMessage(
   content: string,
-  signal?: AbortSignal
+  options?: {
+    sources?: string[];
+    conversationHistory?: ConversationMessage[];
+    signal?: AbortSignal;
+  }
 ): Promise<Response> {
+  const body: Record<string, unknown> = { message: content };
+
+  if (options?.sources?.length) {
+    body.sources = options.sources;
+  }
+
+  if (options?.conversationHistory?.length) {
+    body.conversation_history = options.conversationHistory;
+  }
+
   const response = await fetch(`${API_BASE}/api/v1/chat/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message: content }),
-    signal,
+    body: JSON.stringify(body),
+    signal: options?.signal,
   });
 
   if (!response.ok) {

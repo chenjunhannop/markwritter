@@ -13,7 +13,7 @@ vi.mock('./api', () => ({
 }));
 
 // Import after mocking
-import { useChatStore, useSkillStore } from './store';
+import { useChatStore, useSkillStore, useUIStore } from './store';
 import { getSkills, executeSkill } from './api';
 
 // Get mocked functions
@@ -299,6 +299,26 @@ describe('useSkillStore', () => {
       expect(result).toBeNull();
       expect(useSkillStore.getState().error).toBe('No skill selected');
     });
+  });
+});
+
+// ==================== Phase 2: NavItem type extension ====================
+
+describe('NavItem type extension (Phase 2)', () => {
+  it('should allow setActiveNav with explore, query, record', () => {
+    const store = useUIStore.getState();
+
+    store.setActiveNav('explore');
+    expect(useUIStore.getState().activeNav).toBe('explore');
+
+    store.setActiveNav('query');
+    expect(useUIStore.getState().activeNav).toBe('query');
+
+    store.setActiveNav('record');
+    expect(useUIStore.getState().activeNav).toBe('record');
+
+    // Reset to default
+    store.setActiveNav('chat');
   });
 });
 

@@ -78,7 +78,7 @@ describe('ChatArea Component', () => {
 
       render(<ChatArea />);
 
-      expect(screen.getByText(/no messages yet/i)).toBeInTheDocument();
+      expect(screen.getByText(/start a conversation/i)).toBeInTheDocument();
     });
   });
 
