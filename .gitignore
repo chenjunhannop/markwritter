@@ -52,3 +52,4 @@ playwright-report/
 
 # Notes (local)
 note/
+chat_sessions.db
