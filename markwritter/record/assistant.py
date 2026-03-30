@@ -227,6 +227,100 @@ Polished text:"""
             logger.error(f"Error in polish: {e}")
             return f"Error polishing content: {str(e)}"
 
+    async def rewrite_stream(
+        self,
+        content: str,
+        style: str = "formal",
+        max_tokens: Optional[int] = None,
+    ) -> AsyncGenerator[str, None]:
+        """Rewrite content with streaming output.
+
+        Args:
+            content: The content to rewrite.
+            style: The target style (formal, casual, academic, creative, concise).
+            max_tokens: Maximum tokens for output.
+
+        Yields:
+            Chunks of the rewritten text.
+        """
+        if not content or not content.strip():
+            yield "Please provide content to rewrite."
+            return
+
+        style = style.lower()
+        if style not in self.STYLES:
+            style = "formal"  # Default fallback
+
+        prompt = self.REWRITE_PROMPT.format(content=content, style=style)
+        tokens = max_tokens or self.max_tokens
+
+        try:
+            # Check if LLM client has stream_complete for chat
+            stream_chat = getattr(self.llm_client, "stream_chat_complete", None)
+            if callable(stream_chat):
+                stream = stream_chat(
+                    [{"role": "user", "content": prompt}],
+                    max_tokens=tokens,
+                )
+                if inspect.isasyncgen(stream):
+                    async for chunk in stream:
+                        yield chunk
+                    return
+
+            # Fallback: use regular chat_complete and yield result
+            result = self.llm_client.chat_complete(
+                [{"role": "user", "content": prompt}],
+                max_tokens=tokens,
+            )
+            yield result.strip()
+        except Exception as e:
+            logger.error(f"Error in rewrite_stream: {e}")
+            yield f"Error rewriting content: {str(e)}"
+
+    async def polish_stream(
+        self,
+        content: str,
+        max_tokens: Optional[int] = None,
+    ) -> AsyncGenerator[str, None]:
+        """Polish content with streaming output.
+
+        Args:
+            content: The content to polish.
+            max_tokens: Maximum tokens for output.
+
+        Yields:
+            Chunks of the polished text.
+        """
+        if not content or not content.strip():
+            yield "Please provide content to polish."
+            return
+
+        prompt = self.POLISH_PROMPT.format(content=content)
+        tokens = max_tokens or self.max_tokens
+
+        try:
+            # Check if LLM client has stream_complete for chat
+            stream_chat = getattr(self.llm_client, "stream_chat_complete", None)
+            if callable(stream_chat):
+                stream = stream_chat(
+                    [{"role": "user", "content": prompt}],
+                    max_tokens=tokens,
+                )
+                if inspect.isasyncgen(stream):
+                    async for chunk in stream:
+                        yield chunk
+                    return
+
+            # Fallback: use regular chat_complete and yield result
+            result = self.llm_client.chat_complete(
+                [{"role": "user", "content": prompt}],
+                max_tokens=tokens,
+            )
+            yield result.strip()
+        except Exception as e:
+            logger.error(f"Error in polish_stream: {e}")
+            yield f"Error polishing content: {str(e)}"
+
 
 # ==============================================================================
 # Auto Classifier

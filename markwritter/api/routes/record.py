@@ -235,19 +235,20 @@ class SuggestLinksResponse(BaseModel):
 # ==============================================================================
 
 
-def _is_safe_path(path: str) -> bool:
+def _is_safe_path(path: str, vault_root: Optional[str] = None) -> bool:
     """Check if a path is safe (no path traversal).
 
-    Uses pathlib.Path.resolve() for robust path validation.
+    Uses pathlib.Path.resolve() for robust path validation against vault root.
 
     Args:
         path: Path to check
+        vault_root: Optional vault root directory. If None, only validates path format.
 
     Returns:
         True if path is safe
     """
     import urllib.parse
-    from pathlib import PurePath
+    from pathlib import Path, PurePath
 
     if not path:
         return False
@@ -267,14 +268,14 @@ def _is_safe_path(path: str) -> bool:
     if "\x00" in decoded_path or "%00" in path.lower():
         return False
 
-    # Check for dangerous patterns in decoded path
+    # Normalize path separators
+    normalized = decoded_path.replace("\\", "/")
+
+    # Quick pattern checks before expensive resolve operation
     dangerous_patterns = [
         "..",  # Parent directory
         "~",  # Home directory
     ]
-
-    # Normalize path separators
-    normalized = decoded_path.replace("\\", "/")
 
     for pattern in dangerous_patterns:
         if pattern in normalized:
@@ -296,6 +297,18 @@ def _is_safe_path(path: str) -> bool:
     # Check for UNC paths (\\server\share)
     if decoded_path.startswith("\\\\") or decoded_path.startswith("//"):
         return False
+
+    # If vault_root is provided, do a full resolve-based check
+    if vault_root is not None:
+        try:
+            root_path = Path(vault_root).resolve()
+            # Construct the full target path
+            target_path = (Path(vault_root) / decoded_path).resolve()
+            # Ensure the resolved path starts with the root
+            if not str(target_path).startswith(str(root_path)):
+                return False
+        except (ValueError, RuntimeError):
+            return False
 
     # Additional check: ensure no path traversal after normalization
     # This catches cases like "folder/../../../etc/passwd"
@@ -683,6 +696,93 @@ async def polish(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e),
         )
+
+
+@router.post(
+    "/ai-assist/rewrite/stream",
+    summary="Rewrite text with streaming",
+    description="Rewrite text in a different style with streaming output",
+)
+async def rewrite_stream(
+    request: RewriteRequest,
+    writing_assistant: Optional[WritingAssistant] = Depends(get_writing_assistant),
+) -> StreamingResponse:
+    """Rewrite content with streaming output.
+
+    Args:
+        request: Rewrite request
+        writing_assistant: Injected WritingAssistant instance
+
+    Returns:
+        Streaming response
+    """
+    if not writing_assistant:
+        async def error_stream():
+            yield f"data: {json.dumps({'error': 'Writing assistant not configured'})}\n\n"
+        return StreamingResponse(
+            error_stream(),
+            media_type="text/event-stream",
+        )
+
+    async def generate_stream():
+        try:
+            async for chunk in writing_assistant.rewrite_stream(
+                content=request.content,
+                style=request.style,
+                max_tokens=request.max_tokens,
+            ):
+                yield f"data: {json.dumps({'chunk': chunk})}\n\n"
+        except Exception as e:
+            logger.error(f"Streaming error in rewrite: {e}")
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
+    return StreamingResponse(
+        generate_stream(),
+        media_type="text/event-stream",
+    )
+
+
+@router.post(
+    "/ai-assist/polish/stream",
+    summary="Polish text with streaming",
+    description="Improve grammar, clarity, and flow with streaming output",
+)
+async def polish_stream(
+    request: PolishRequest,
+    writing_assistant: Optional[WritingAssistant] = Depends(get_writing_assistant),
+) -> StreamingResponse:
+    """Polish content with streaming output.
+
+    Args:
+        request: Polish request
+        writing_assistant: Injected WritingAssistant instance
+
+    Returns:
+        Streaming response
+    """
+    if not writing_assistant:
+        async def error_stream():
+            yield f"data: {json.dumps({'error': 'Writing assistant not configured'})}\n\n"
+        return StreamingResponse(
+            error_stream(),
+            media_type="text/event-stream",
+        )
+
+    async def generate_stream():
+        try:
+            async for chunk in writing_assistant.polish_stream(
+                content=request.content,
+                max_tokens=request.max_tokens,
+            ):
+                yield f"data: {json.dumps({'chunk': chunk})}\n\n"
+        except Exception as e:
+            logger.error(f"Streaming error in polish: {e}")
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
+    return StreamingResponse(
+        generate_stream(),
+        media_type="text/event-stream",
+    )
 
 
 # ==============================================================================
