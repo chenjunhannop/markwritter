@@ -1,7 +1,7 @@
 # TODOS - Markwritter
 
 > **Last Updated:** 2026-03-30
-> **Version:** 0.1.1.0
+> **Version:** 0.2.0.0
 
 ---
 
@@ -32,16 +32,20 @@ All ENG-001 ~ ENG-006 items have been completed as part of the Chat with Sources
 
 ---
 
-## 🎯 Phase 2: Core Experience (Next Priority)
+## 🎯 Phase 2: Core Experience (Current Priority)
 
-### P0 - AI Writing Assist
+### P0 - AI Writing Assist (已有 90% 完成)
 
-| ID | Task | Description |
-|----|------|-------------|
-| **WRT-001** | Editor Component | Create markdown editor with AI assist buttons |
-| **WRT-002** | Continue Writing | LLM-powered content continuation |
-| **WRT-003** | Rewrite/Polish | Text improvement and style adjustment |
-| **WRT-004** | Template System | YAML-based templates with variables |
+**状态：** 核心功能已实现，需要验证和收尾
+
+| ID | Task | Description | Status |
+|----|------|-------------|--------|
+| **WRT-001** | 端到端验证 | 验证前端→后端→LLM 完整链路 | ⏳ 待执行 |
+| **WRT-002** | 添加流式端点 | rewrite/polish 流式支持 | ⏳ 待实现 |
+| **WRT-003** | 右键菜单 | 选中文字后右键弹出 AI 选项 | ⏳ 待实现 |
+| **WRT-004** | 错误恢复 | 重试按钮和错误详情 | ⏳ 待实现 |
+
+**关键发现：** `markwritter/record/assistant.py` 已包含完整的 WritingAssistant 类，支持续写、改写、润色功能，API 路由已存在于 `api/routes/record.py`。
 
 ### P0 - Summarization
 
