@@ -4,7 +4,7 @@ import hashlib
 import time
 from collections import OrderedDict
 from dataclasses import dataclass
-from typing import Any, Optional, Protocol
+from typing import Any, AsyncGenerator, Optional, Protocol
 
 from markwritter.config import get_config
 from markwritter.models import LLMConfig
@@ -481,6 +481,41 @@ class LLMClient:
         raise LLMError(
             f"LLM API failed after {self.config.max_retries + 1} attempts: {last_error}"
         ) from last_error
+
+    async def stream_complete(
+        self,
+        messages: list[dict[str, str]],
+        model: Optional[str] = None,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+    ) -> AsyncGenerator[str, None]:
+        """Stream chat completion tokens from the LLM."""
+        import litellm
+
+        model = model or self.config.default_model
+        temperature = temperature if temperature is not None else self.config.temperature
+
+        kwargs: dict[str, Any] = {
+            "model": model,
+            "messages": messages,
+            "temperature": temperature,
+            "timeout": self.config.timeout,
+            "stream": True,
+        }
+        if max_tokens:
+            kwargs["max_tokens"] = max_tokens
+
+        response = await litellm.acompletion(**kwargs)
+
+        async for chunk in response:
+            choices = getattr(chunk, "choices", None) or []
+            if not choices:
+                continue
+
+            delta = getattr(choices[0], "delta", None)
+            token = getattr(delta, "content", None) if delta else None
+            if token:
+                yield token
 
     def get_cache_stats(self) -> dict[str, int]:
         """Get cache statistics.

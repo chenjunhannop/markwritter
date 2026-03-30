@@ -2,12 +2,15 @@
 
 import tempfile
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
 from markwritter.agent.chat_graph import (
     GraphState,
+    build_chat_messages,
     create_chat_graph,
+    retrieve_chat_context,
     run_chat_graph,
     state_to_chat_state,
 )
@@ -18,6 +21,19 @@ from markwritter.storage.path_resolver import PathResolver
 from markwritter.storage.rag_tool import RAGSearchTool
 from markwritter.storage.service import ContentService
 from markwritter.storage.registry import StorageRegistry
+
+
+@pytest.fixture
+def mock_llm_service():
+    """Create a mock LLM service."""
+    return SimpleNamespace(
+        chat_complete=lambda messages: SimpleNamespace(
+            success=True,
+            content="Mocked response [1]",
+            message="",
+            messages=messages,
+        )
+    )
 
 
 @pytest.fixture
@@ -73,21 +89,23 @@ class TestCreateChatGraph:
     """Tests for create_chat_graph function."""
 
     @pytest.mark.asyncio
-    async def test_create_graph(self, setup_dependencies) -> None:
+    async def test_create_graph(self, setup_dependencies, mock_llm_service) -> None:
         """Test graph creation."""
         graph = create_chat_graph(
             rag_tool=setup_dependencies["rag_tool"],
             chat_db=setup_dependencies["chat_db"],
+            llm_service=mock_llm_service,
         )
 
         assert graph is not None
 
     @pytest.mark.asyncio
-    async def test_graph_has_nodes(self, setup_dependencies) -> None:
+    async def test_graph_has_nodes(self, setup_dependencies, mock_llm_service) -> None:
         """Test graph has required nodes."""
         graph = create_chat_graph(
             rag_tool=setup_dependencies["rag_tool"],
             chat_db=setup_dependencies["chat_db"],
+            llm_service=mock_llm_service,
         )
 
         # Compile to inspect
@@ -101,11 +119,12 @@ class TestRunChatGraph:
     """Tests for running the chat graph."""
 
     @pytest.mark.asyncio
-    async def test_run_graph_basic(self, setup_dependencies) -> None:
+    async def test_run_graph_basic(self, setup_dependencies, mock_llm_service) -> None:
         """Test running graph with basic query."""
         graph = create_chat_graph(
             rag_tool=setup_dependencies["rag_tool"],
             chat_db=setup_dependencies["chat_db"],
+            llm_service=mock_llm_service,
         )
 
         result = await run_chat_graph(
@@ -121,12 +140,13 @@ class TestRunChatGraph:
 
     @pytest.mark.asyncio
     async def test_run_graph_with_no_sources(
-        self, setup_dependencies
+        self, setup_dependencies, mock_llm_service
     ) -> None:
         """Test graph handles empty sources gracefully."""
         graph = create_chat_graph(
             rag_tool=setup_dependencies["rag_tool"],
             chat_db=setup_dependencies["chat_db"],
+            llm_service=mock_llm_service,
         )
 
         result = await run_chat_graph(
@@ -141,12 +161,13 @@ class TestRunChatGraph:
 
     @pytest.mark.asyncio
     async def test_run_graph_updates_state(
-        self, setup_dependencies
+        self, setup_dependencies, mock_llm_service
     ) -> None:
         """Test graph updates state correctly."""
         graph = create_chat_graph(
             rag_tool=setup_dependencies["rag_tool"],
             chat_db=setup_dependencies["chat_db"],
+            llm_service=mock_llm_service,
         )
 
         initial_sources = ["notes/test.md"]
@@ -166,6 +187,67 @@ class TestRunChatGraph:
         assert "retrieved_chunks" in result
         assert "response" in result
         assert "citations" in result
+
+    @pytest.mark.asyncio
+    async def test_run_graph_preserves_sources_and_history(
+        self, setup_dependencies, mock_llm_service
+    ) -> None:
+        """Test explicit sources and history are passed into the graph."""
+        graph = create_chat_graph(
+            rag_tool=setup_dependencies["rag_tool"],
+            chat_db=setup_dependencies["chat_db"],
+            llm_service=mock_llm_service,
+        )
+
+        result = await run_chat_graph(
+            graph=graph,
+            session_id="history-session",
+            query="Follow-up question",
+            selected_source_paths=["notes/a.md"],
+            conversation_history=[{"role": "user", "content": "Earlier question"}],
+        )
+
+        assert result["selected_source_paths"] == ["notes/a.md"]
+        assert result["conversation_history"] == [
+            {"role": "user", "content": "Earlier question"}
+        ]
+
+
+class TestPromptBuilding:
+    """Tests for prompt generation helpers."""
+
+    def test_build_chat_messages_includes_history_and_context(self) -> None:
+        """Test prompt construction for RAG responses."""
+        messages = build_chat_messages(
+            query="What changed?",
+            chunks=[{"file_path": "notes/a.md", "page_num": 0, "text": "Important fact"}],
+            history=[{"role": "assistant", "content": "Previous answer"}],
+        )
+
+        assert messages[0]["role"] == "system"
+        assert messages[1] == {"role": "assistant", "content": "Previous answer"}
+        assert "Important fact" in messages[-1]["content"]
+        assert "Question: What changed?" in messages[-1]["content"]
+
+
+class TestRetrieveContext:
+    """Tests for retrieval-only helper used by SSE route."""
+
+    @pytest.mark.asyncio
+    async def test_retrieve_chat_context_uses_selected_sources(
+        self, setup_dependencies
+    ) -> None:
+        """Test retrieval helper preserves selected source paths."""
+        state = await retrieve_chat_context(
+            rag_tool=setup_dependencies["rag_tool"],
+            chat_db=setup_dependencies["chat_db"],
+            session_id="retrieve-session",
+            query="test",
+            selected_source_paths=["notes/a.md"],
+        )
+
+        assert state["selected_source_paths"] == ["notes/a.md"]
+        assert "retrieved_chunks" in state
 
 
 class TestStateToChatState:
@@ -256,13 +338,17 @@ class TestChatGraphIntegration:
     """Integration tests for full chat graph flow."""
 
     @pytest.mark.asyncio
-    async def test_full_conversation_flow(self, setup_dependencies) -> None:
+    async def test_full_conversation_flow(self, setup_dependencies, mock_llm_service) -> None:
         """Test complete conversation flow."""
         rag_tool = setup_dependencies["rag_tool"]
         chat_db = setup_dependencies["chat_db"]
 
         # Create graph
-        graph = create_chat_graph(rag_tool=rag_tool, chat_db=chat_db)
+        graph = create_chat_graph(
+            rag_tool=rag_tool,
+            chat_db=chat_db,
+            llm_service=mock_llm_service,
+        )
 
         # First turn
         result1 = await run_chat_graph(

@@ -5,7 +5,12 @@
  * All functions use fetch and return typed responses.
  */
 
-import type { Skill, SkillRunRequest, SkillRunResponse, ConversationMessage } from './types';
+import type {
+  ChatRequestBody,
+  Skill,
+  SkillRunRequest,
+  SkillRunResponse,
+} from './types';
 
 // API base URL from environment variable
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -49,27 +54,26 @@ export async function createApiError(response: Response): Promise<ApiError> {
  * @throws ApiError if the request fails
  */
 export async function sendMessage(
-  content: string,
-  options?: {
-    sources?: string[];
-    conversationHistory?: ConversationMessage[];
-    signal?: AbortSignal;
-  }
+  body: ChatRequestBody,
+  options?: { signal?: AbortSignal }
 ): Promise<Response> {
-  const body: Record<string, unknown> = { message: content };
+  const requestBody: Record<string, unknown> = {
+    message: body.message,
+    session_id: body.session_id,
+  };
 
-  if (options?.sources?.length) {
-    body.sources = options.sources;
+  if (body.sources !== undefined) {
+    requestBody.sources = body.sources;
   }
 
-  if (options?.conversationHistory?.length) {
-    body.conversation_history = options.conversationHistory;
+  if (body.conversation_history !== undefined) {
+    requestBody.conversation_history = body.conversation_history;
   }
 
   const response = await fetch(`${API_BASE}/api/v1/chat/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    body: JSON.stringify(requestBody),
     signal: options?.signal,
   });
 
@@ -78,6 +82,63 @@ export async function sendMessage(
   }
 
   return response;
+}
+
+export interface SourceSelectionRequest {
+  session_id: string;
+  source_paths: string[];
+}
+
+export interface SourceSelectionResponse {
+  session_id: string;
+  selected_sources: string[];
+  count: number;
+}
+
+export async function selectSources(
+  request: SourceSelectionRequest
+): Promise<SourceSelectionResponse> {
+  const response = await fetch(`${API_BASE}/api/v1/chat/sources`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+
+  if (!response.ok) {
+    throw await createApiError(response);
+  }
+
+  return response.json();
+}
+
+export async function getSelectedSources(
+  sessionId: string
+): Promise<SourceSelectionResponse> {
+  const response = await fetch(
+    `${API_BASE}/api/v1/chat/sources?session_id=${encodeURIComponent(sessionId)}`,
+    { method: 'GET' }
+  );
+
+  if (!response.ok) {
+    throw await createApiError(response);
+  }
+
+  return response.json();
+}
+
+export async function clearSelectedSources(
+  sessionId: string
+): Promise<{ success: boolean; session_id: string; message: string }> {
+  const response = await fetch(
+    `${API_BASE}/api/v1/chat/sources?session_id=${encodeURIComponent(sessionId)}`,
+    { method: 'DELETE' }
+  );
+
+  if (!response.ok) {
+    throw await createApiError(response);
+  }
+
+  return response.json();
 }
 
 /**

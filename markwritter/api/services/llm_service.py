@@ -7,7 +7,7 @@ Provides a clean interface for LLM completion operations with proper error handl
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, AsyncGenerator, Optional
 
 from pydantic import BaseModel
 
@@ -145,6 +145,28 @@ class LLMService:
                 success=False,
                 message=str(e),
             )
+
+    async def stream_complete(
+        self,
+        messages: Optional[list[dict[str, str]]] = None,
+        model: Optional[str] = None,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+    ) -> AsyncGenerator[str, None]:
+        """Stream a chat completion request."""
+        if messages is None:
+            raise ValueError("Messages are required for chat completion")
+
+        kwargs: dict[str, Any] = {}
+        if model is not None:
+            kwargs["model"] = model
+        if temperature is not None:
+            kwargs["temperature"] = temperature
+        if max_tokens is not None:
+            kwargs["max_tokens"] = max_tokens
+
+        async for token in self._llm_client.stream_complete(messages=messages, **kwargs):
+            yield token
 
     def complete_with_capability(
         self,

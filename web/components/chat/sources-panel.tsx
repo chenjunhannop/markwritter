@@ -4,17 +4,64 @@
  * SourcesPanel - Left panel containing file tree, search, and vault path bar.
  */
 
+import { useEffect, useRef } from 'react';
 import { Search, ChevronLeft, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useUIStore } from '@/lib/store';
+import { clearSelectedSources, getSelectedSources, selectSources } from '@/lib/api';
+import { useChatStore, useUIStore } from '@/lib/store';
 import { useSources } from '@/hooks/use-sources';
 import { FileTree } from './file-tree';
 import { VaultPathBar } from './vault-path-bar';
 
 export function SourcesPanel() {
   const toggleLeftPanel = useUIStore((s) => s.toggleLeftPanel);
+  const currentSessionId = useChatStore((s) => s.currentSessionId);
+  const selectedSources = useChatStore((s) => s.selectedSources);
+  const setSelectedSources = useChatStore((s) => s.setSelectedSources);
   const { tree, isLoading, searchQuery, setSearchQuery } = useSources();
+  const isHydratingRef = useRef(false);
+  const lastSyncedKeyRef = useRef<string>('');
+
+  useEffect(() => {
+    if (!currentSessionId) return;
+
+    isHydratingRef.current = true;
+    getSelectedSources(currentSessionId)
+      .then((response) => {
+        setSelectedSources(response.selected_sources);
+        lastSyncedKeyRef.current = JSON.stringify(response.selected_sources);
+      })
+      .catch(() => {
+        lastSyncedKeyRef.current = JSON.stringify(selectedSources);
+      })
+      .finally(() => {
+        isHydratingRef.current = false;
+      });
+  }, [currentSessionId, setSelectedSources]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!currentSessionId || isHydratingRef.current) return;
+
+    const serialized = JSON.stringify(selectedSources);
+    if (serialized === lastSyncedKeyRef.current) return;
+
+    const persist = async () => {
+      if (selectedSources.length === 0) {
+        await clearSelectedSources(currentSessionId);
+      } else {
+        await selectSources({
+          session_id: currentSessionId,
+          source_paths: selectedSources,
+        });
+      }
+      lastSyncedKeyRef.current = serialized;
+    };
+
+    persist().catch(() => {
+      // Ignore persistence errors here; the chat request still sends sources directly.
+    });
+  }, [currentSessionId, selectedSources]);
 
   return (
     <div className="flex h-full flex-col">

@@ -2,11 +2,13 @@
 
 import tempfile
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from fastapi.testclient import TestClient
 
 from markwritter.api.app import create_app
+from markwritter.api.routes import chat as chat_routes
 
 
 @pytest.fixture
@@ -220,6 +222,138 @@ class TestChatEndpoint:
 
         # Should still process (may return empty response or error)
         assert response.status_code == 200
+
+    def test_chat_streams_tokens_and_citations(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test chat endpoint streams LLM tokens and citation event."""
+
+        class FakeChatDB:
+            def __init__(self) -> None:
+                self.saved_messages: list[tuple[str, int, str, str]] = []
+
+            async def get_sources(self, session_id: str) -> list[str]:
+                return []
+
+            async def get_conversation_history(self, session_id: str) -> list[dict]:
+                return []
+
+            async def save_session(self, session_id: str, sources: list[str]) -> None:
+                return None
+
+            async def save_message(
+                self, session_id: str, message_index: int, role: str, content: str
+            ) -> None:
+                self.saved_messages.append((session_id, message_index, role, content))
+
+        class FakeRAGTool:
+            async def search(self, query: str, source_paths=None, limit: int = 5):
+                chunk = SimpleNamespace(
+                    text="Source snippet",
+                    file_path="notes/a.md",
+                    page_num=0,
+                    paragraph_idx=0,
+                    score=1.0,
+                    content_id="notes/a.md",
+                )
+                return SimpleNamespace(chunks=[chunk])
+
+        class FakeLLMService:
+            def __init__(self) -> None:
+                self.messages: list[dict[str, str]] | None = None
+
+            async def stream_complete(self, messages):
+                self.messages = messages
+                for token in ["Hello", " world"]:
+                    yield token
+
+        fake_db = FakeChatDB()
+        fake_llm = FakeLLMService()
+
+        async def fake_get_chat_db():
+            return fake_db
+
+        async def fake_get_rag_tool():
+            return FakeRAGTool()
+
+        monkeypatch.setattr(chat_routes, "get_chat_db", fake_get_chat_db)
+        monkeypatch.setattr(chat_routes, "get_rag_tool", fake_get_rag_tool)
+        monkeypatch.setattr(chat_routes, "get_llm_service", lambda: fake_llm)
+
+        response = client.post(
+            "/api/v1/chat",
+            json={
+                "message": "Summarize this",
+                "session_id": "session-1",
+                "sources": ["notes/a.md"],
+                "conversation_history": [{"role": "user", "content": "Earlier"}],
+            },
+        )
+
+        assert response.status_code == 200
+        assert '"type":"text_delta","content":"Hello"' in response.text
+        assert '"type":"text_delta","content":" world"' in response.text
+        assert '"type":"citation"' in response.text
+        assert fake_llm.messages is not None
+        assert fake_llm.messages[1] == {"role": "user", "content": "Earlier"}
+        assert fake_db.saved_messages[-1] == (
+            "session-1",
+            1,
+            "assistant",
+            "Hello world",
+        )
+
+    def test_chat_uses_database_sources_when_request_omits_them(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test chat falls back to persisted selected sources."""
+
+        class FakeChatDB:
+            async def get_sources(self, session_id: str) -> list[str]:
+                return ["notes/persisted.md"]
+
+            async def get_conversation_history(self, session_id: str) -> list[dict]:
+                return []
+
+            async def save_session(self, session_id: str, sources: list[str]) -> None:
+                return None
+
+            async def save_message(
+                self, session_id: str, message_index: int, role: str, content: str
+            ) -> None:
+                return None
+
+        class FakeRAGTool:
+            def __init__(self) -> None:
+                self.source_paths = None
+
+            async def search(self, query: str, source_paths=None, limit: int = 5):
+                self.source_paths = source_paths
+                return SimpleNamespace(chunks=[])
+
+        class FakeLLMService:
+            async def stream_complete(self, messages):
+                yield "Done"
+
+        fake_rag_tool = FakeRAGTool()
+
+        async def fake_get_chat_db():
+            return FakeChatDB()
+
+        async def fake_get_rag_tool():
+            return fake_rag_tool
+
+        monkeypatch.setattr(chat_routes, "get_chat_db", fake_get_chat_db)
+        monkeypatch.setattr(chat_routes, "get_rag_tool", fake_get_rag_tool)
+        monkeypatch.setattr(chat_routes, "get_llm_service", lambda: FakeLLMService())
+
+        response = client.post(
+            "/api/v1/chat",
+            json={"message": "Question", "session_id": "session-2"},
+        )
+
+        assert response.status_code == 200
+        assert fake_rag_tool.source_paths == ["notes/persisted.md"]
 
 
 class TestSSEStreamParsing:

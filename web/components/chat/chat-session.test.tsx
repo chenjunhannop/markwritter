@@ -287,6 +287,29 @@ describe('ChatSession Component', () => {
     });
   });
 
+  describe('citations', () => {
+    it('should render clickable citation badges', () => {
+      const message: Message = {
+        id: '1',
+        role: 'assistant',
+        content: 'Answer with citation [1]',
+        citations: [
+          {
+            file_path: 'notes/a.md',
+            page_num: 0,
+            paragraph_idx: 0,
+            text_snippet: 'Source snippet',
+          },
+        ],
+        timestamp: 1000,
+      };
+
+      render(<ChatSession messages={[message]} />);
+
+      expect(screen.getByRole('button', { name: /show citation 1/i })).toBeInTheDocument();
+    });
+  });
+
   describe('accessibility', () => {
     it('should have proper ARIA roles for messages', () => {
       render(<ChatSession messages={mockMessages} />);

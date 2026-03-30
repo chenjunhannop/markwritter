@@ -19,6 +19,8 @@ class ChatRequest(BaseModel):
 
     message: str
     session_id: Optional[str] = None  # Optional session ID for multi-turn conversations
+    sources: Optional[list[str]] = None
+    conversation_history: Optional[list[dict[str, str]]] = None
 
 
 class ChatEvent(BaseModel):

@@ -9,11 +9,12 @@ The graph maintains conversation state across multi-turn dialogues.
 """
 
 import logging
-from typing import Annotated, Literal, TypedDict
+from typing import TypedDict
 
 from langgraph.graph import StateGraph, END
 
 from markwritter.api.models.chat import ChatState, Citation
+from markwritter.api.services.llm_service import LLMService
 from markwritter.storage.rag_tool import RAGSearchTool
 from markwritter.storage.chat_db import ChatSessionDB
 
@@ -41,6 +42,7 @@ class GraphState(TypedDict):
 def create_chat_graph(
     rag_tool: RAGSearchTool,
     chat_db: ChatSessionDB,
+    llm_service: LLMService | None = None,
 ) -> StateGraph:
     """Create the chat conversation graph.
 
@@ -62,7 +64,7 @@ def create_chat_graph(
 
     # Add nodes
     builder.add_node("retrieve_sources", create_retrieve_node(rag_tool, chat_db))
-    builder.add_node("generate_response", create_generate_node())
+    builder.add_node("generate_response", create_generate_node(llm_service))
 
     # Set entry point
     builder.set_entry_point("retrieve_sources")
@@ -72,6 +74,79 @@ def create_chat_graph(
     builder.add_edge("generate_response", END)
 
     return builder
+
+
+def normalize_conversation_history(history: list[dict] | None) -> list[dict[str, str]]:
+    """Normalize history entries to role/content dicts."""
+    normalized: list[dict[str, str]] = []
+    for item in history or []:
+        role = str(item.get("role", "")).strip()
+        content = str(item.get("content", "")).strip()
+        if role in {"user", "assistant", "system"} and content:
+            normalized.append({"role": role, "content": content})
+    return normalized
+
+
+def build_citations(chunks: list[dict], max_chunks: int = 5) -> list[dict]:
+    """Build citation payloads from retrieved chunks."""
+    citations: list[dict] = []
+    for chunk in chunks[:max_chunks]:
+        citations.append(
+            {
+                "file_path": chunk["file_path"],
+                "page_num": chunk["page_num"],
+                "paragraph_idx": chunk["paragraph_idx"],
+                "text_snippet": chunk["text"][:200],
+            }
+        )
+    return citations
+
+
+def build_chat_messages(
+    query: str,
+    chunks: list[dict],
+    history: list[dict] | None = None,
+    max_chunks: int = 5,
+) -> list[dict[str, str]]:
+    """Build LLM messages for chat generation."""
+    normalized_history = normalize_conversation_history(history)
+
+    if not chunks:
+        system_prompt = (
+            "You are a helpful assistant. Answer clearly and concisely. "
+            "If the user references prior context, use the conversation history when helpful."
+        )
+        return [
+            {"role": "system", "content": system_prompt},
+            *normalized_history,
+            {"role": "user", "content": query},
+        ]
+
+    context_parts: list[str] = []
+    for index, chunk in enumerate(chunks[:max_chunks], start=1):
+        location = chunk["file_path"]
+        if chunk.get("page_num", 0) > 0:
+            location = f"{location}, page {chunk['page_num']}"
+        context_parts.append(f"[{index}] {location}\n{chunk['text']}")
+
+    system_prompt = (
+        "You answer questions using the provided source context. "
+        "Prefer the supplied context over prior assumptions. "
+        "If the answer is not supported by the context, say that clearly. "
+        "When you rely on a source, cite it inline as [1], [2], etc."
+    )
+    context = "\n\n".join(context_parts)
+    user_prompt = (
+        f"Context:\n{context}\n\n"
+        f"Question: {query}\n\n"
+        "Answer:"
+    )
+
+    return [
+        {"role": "system", "content": system_prompt},
+        *normalized_history,
+        {"role": "user", "content": user_prompt},
+    ]
 
 
 def create_retrieve_node(
@@ -142,13 +217,39 @@ def create_retrieve_node(
     return retrieve
 
 
-def create_generate_node():
+async def retrieve_chat_context(
+    rag_tool: RAGSearchTool,
+    chat_db: ChatSessionDB,
+    session_id: str,
+    query: str,
+    selected_source_paths: list[str] | None = None,
+    conversation_history: list[dict] | None = None,
+) -> GraphState:
+    """Run only the retrieval portion of the chat workflow."""
+    state: GraphState = {
+        "session_id": session_id,
+        "query": query,
+        "selected_source_paths": selected_source_paths or [],
+        "retrieved_chunks": [],
+        "conversation_history": normalize_conversation_history(conversation_history),
+        "response": "",
+        "citations": [],
+        "error": None,
+    }
+    retrieve = create_retrieve_node(rag_tool, chat_db)
+    return await retrieve(state)
+
+
+def create_generate_node(llm_service: LLMService | None = None):
     """Create the response generation node.
 
     Generates response using retrieved context.
-    Note: Currently implements a simple template-based response.
-    TODO: Integrate with LiteLLM for actual LLM generation.
     """
+
+    if llm_service is None:
+        from markwritter.llm_client import LLMClient
+
+        llm_service = LLMService(LLMClient())
 
     async def generate(state: GraphState) -> GraphState:
         """Generate response from retrieved context.
@@ -161,40 +262,17 @@ def create_generate_node():
         """
         query = state["query"]
         chunks = state["retrieved_chunks"]
-        history = state["conversation_history"]
+        history = normalize_conversation_history(state["conversation_history"])
 
         try:
-            if not chunks:
-                # No context found - return helpful message
-                response = (
-                    f"I couldn't find relevant information about '{query}' in your "
-                    "selected sources. Try selecting different sources or rephrasing "
-                    "your question."
-                )
-                citations = []
-            else:
-                # Build response from chunks
-                # TODO: Replace with actual LLM call
-                context_parts = []
-                citations = []
+            citations = build_citations(chunks)
+            messages = build_chat_messages(query=query, chunks=chunks, history=history)
+            result = llm_service.chat_complete(messages=messages)
 
-                for i, chunk in enumerate(chunks[:3]):  # Use top 3 chunks
-                    context_parts.append(f"[{chunk['file_path']}]: {chunk['text'][:200]}")
+            if not result.success:
+                raise RuntimeError(result.message or "LLM completion failed")
 
-                    # Create citation
-                    citations.append({
-                        "file_path": chunk["file_path"],
-                        "page_num": chunk["page_num"],
-                        "paragraph_idx": chunk["paragraph_idx"],
-                        "text_snippet": chunk["text"][:100],
-                    })
-
-                response = (
-                    f"Based on your sources, here's what I found about '{query}':\n\n"
-                    + "\n\n".join(context_parts)
-                    + "\n\n"
-                    + f"(This is a placeholder response. LLM integration coming soon.)"
-                )
+            response = result.content
 
             logger.info(f"Generated response with {len(citations)} citations")
 
@@ -220,6 +298,8 @@ async def run_chat_graph(
     graph: StateGraph,
     session_id: str,
     query: str,
+    selected_source_paths: list[str] | None = None,
+    conversation_history: list[dict] | None = None,
 ) -> dict:
     """Run the chat graph for a single query.
 
@@ -238,9 +318,9 @@ async def run_chat_graph(
     initial_state = {
         "session_id": session_id,
         "query": query,
-        "selected_source_paths": [],
+        "selected_source_paths": selected_source_paths or [],
         "retrieved_chunks": [],
-        "conversation_history": [],
+        "conversation_history": normalize_conversation_history(conversation_history),
         "response": "",
         "citations": [],
         "error": None,
@@ -286,5 +366,9 @@ __all__ = [
     "create_chat_graph",
     "run_chat_graph",
     "state_to_chat_state",
+    "build_chat_messages",
+    "build_citations",
+    "normalize_conversation_history",
+    "retrieve_chat_context",
     "GraphState",
 ]

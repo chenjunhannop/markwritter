@@ -9,14 +9,28 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
+from markwritter.agent.chat_graph import (
+    build_chat_messages,
+    build_citations,
+    normalize_conversation_history,
+    retrieve_chat_context,
+)
 from markwritter.api.models.chat import (
     ChatEvent,
     ChatRequest,
     SourceSelectionRequest,
     SourceSelectionResponse,
 )
+from markwritter.api.routes import settings as settings_routes
+from markwritter.api.services.llm_service import LLMService
 from markwritter.api.services.framework_bridge import get_framework
+from markwritter.llm_client import LLMClient
+from markwritter.storage.backends.obsidian import ObsidianRepository
 from markwritter.storage.chat_db import ChatSessionDB
+from markwritter.storage.path_resolver import PathResolver
+from markwritter.storage.rag_tool import RAGSearchTool
+from markwritter.storage.registry import StorageRegistry
+from markwritter.storage.service import ContentService
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +38,8 @@ router = APIRouter(prefix="/chat", tags=["chat"])
 
 # Global instance for session DB (initialized on first use)
 _chat_db: Optional[ChatSessionDB] = None
+_rag_tool: Optional[RAGSearchTool] = None
+_llm_service: Optional[LLMService] = None
 _init_lock = asyncio.Lock()
 
 
@@ -38,6 +54,40 @@ async def get_chat_db() -> ChatSessionDB:
                 await _chat_db.initialize()
                 logger.info("Initialized chat session database")
     return _chat_db
+
+
+def _get_vault_path() -> Path:
+    """Resolve the current vault path configured for the app."""
+    if settings_routes._data_dir is None:
+        raise RuntimeError("Vault path is not configured")
+    return Path(settings_routes._data_dir)
+
+
+async def get_rag_tool() -> RAGSearchTool:
+    """Get or create the RAG search tool singleton."""
+    global _rag_tool
+    if _rag_tool is None:
+        async with _init_lock:
+            if _rag_tool is None:
+                registry = StorageRegistry()
+                registry.register(ObsidianRepository(vault_path=_get_vault_path()))
+                content_service = ContentService(registry=registry)
+                path_resolver = PathResolver(content_service=content_service)
+                _rag_tool = RAGSearchTool(
+                    content_service=content_service,
+                    path_resolver=path_resolver,
+                )
+                logger.info("Initialized RAG search tool")
+    return _rag_tool
+
+
+def get_llm_service() -> LLMService:
+    """Get or create the LLM service singleton."""
+    global _llm_service
+    if _llm_service is None:
+        _llm_service = LLMService(LLMClient())
+        logger.info("Initialized LLM service")
+    return _llm_service
 
 
 @router.post("/sources")
@@ -151,28 +201,108 @@ async def clear_sources(session_id: str) -> dict:
 
 @router.post("/")
 async def chat(request: ChatRequest):
-    """Handle chat message and return SSE stream."""
+    """Handle chat message with RAG retrieval and SSE streaming."""
+
+    async def event_generator():
+        yield f"data: {json.dumps({'type': 'thinking'})}\n\n"
+
+        try:
+            session_id = request.session_id or "default"
+            chat_db = await get_chat_db()
+            rag_tool = await get_rag_tool()
+            llm_service = get_llm_service()
+
+            effective_sources = (
+                request.sources
+                if request.sources is not None
+                else await chat_db.get_sources(session_id)
+            )
+            existing_history = await chat_db.get_conversation_history(session_id)
+            fallback_history = [
+                {"role": item["role"], "content": item["content"]}
+                for item in existing_history
+            ]
+            conversation_history = normalize_conversation_history(
+                request.conversation_history
+                if request.conversation_history is not None
+                else fallback_history
+            )
+
+            if request.sources is not None:
+                await chat_db.save_session(session_id, request.sources)
+
+            graph_state = await retrieve_chat_context(
+                rag_tool=rag_tool,
+                chat_db=chat_db,
+                session_id=session_id,
+                query=request.message,
+                selected_source_paths=effective_sources,
+                conversation_history=conversation_history,
+            )
+
+            if graph_state.get("error"):
+                event = ChatEvent(type="error", content=graph_state["error"])
+                yield f"data: {event.model_dump_json()}\n\n"
+                return
+
+            messages = build_chat_messages(
+                query=request.message,
+                chunks=graph_state.get("retrieved_chunks", []),
+                history=conversation_history,
+            )
+            citations = build_citations(graph_state.get("retrieved_chunks", []))
+
+            response_parts: list[str] = []
+            async for token in llm_service.stream_complete(messages):
+                response_parts.append(token)
+                event = ChatEvent(type="text_delta", content=token)
+                yield f"data: {event.model_dump_json()}\n\n"
+
+            if citations:
+                event = ChatEvent(
+                    type="citation",
+                    content=json.dumps(citations),
+                )
+                yield f"data: {event.model_dump_json()}\n\n"
+
+            message_index = len(existing_history)
+            await chat_db.save_message(session_id, message_index, "user", request.message)
+            await chat_db.save_message(
+                session_id,
+                message_index + 1,
+                "assistant",
+                "".join(response_parts),
+            )
+
+            yield f"data: {json.dumps({'type': 'done'})}\n\n"
+        except Exception as e:
+            logger.exception("Chat error")
+            event = ChatEvent(type="error", content=str(e))
+            yield f"data: {event.model_dump_json()}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+    )
+
+
+@router.post("/skill")
+async def skill_chat(request: ChatRequest):
+    """Handle legacy skill-dispatch chat requests."""
 
     async def event_generator():
         framework = get_framework()
 
-        # Send thinking status
         yield f"data: {json.dumps({'type': 'thinking'})}\n\n"
 
         try:
-            # Process input through framework
             result = framework.process_input(request.message)
-
-            # Stream the response character by character
             for char in result:
                 event = ChatEvent(type="text_delta", content=char)
                 yield f"data: {event.model_dump_json()}\n\n"
 
-            # Send done event
             yield f"data: {json.dumps({'type': 'done'})}\n\n"
-
         except Exception as e:
-            # Send error event
             event = ChatEvent(type="error", content=str(e))
             yield f"data: {event.model_dump_json()}\n\n"
 

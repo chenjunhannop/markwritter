@@ -24,6 +24,8 @@ export interface Message {
   role: MessageRole;
   /** Message content */
   content: string;
+  /** Source citations attached to the message */
+  citations?: Citation[];
   /** Unix timestamp in milliseconds */
   timestamp: number;
 }
@@ -99,7 +101,23 @@ export interface SkillRunResponse {
 /**
  * Type of SSE event from chat stream
  */
-export type ChatEventType = 'thinking' | 'text_delta' | 'sources' | 'done' | 'error';
+export type ChatEventType =
+  | 'thinking'
+  | 'text_delta'
+  | 'sources'
+  | 'citation'
+  | 'done'
+  | 'error';
+
+/**
+ * Citation payload from the backend chat stream
+ */
+export interface Citation {
+  file_path: string;
+  page_num: number;
+  paragraph_idx: number;
+  text_snippet: string;
+}
 
 /**
  * Source reference for streaming events
@@ -122,6 +140,8 @@ export interface ChatEvent {
   content: string;
   /** Source references (for sources event type) */
   sources?: StreamSource[];
+  /** Citation payload for citation events */
+  citation?: Citation;
 }
 
 // ==================== File Tree Types ====================
@@ -198,6 +218,7 @@ export interface ConversationMessage {
  */
 export interface ChatRequestBody {
   message: string;
+  session_id: string;
   sources?: string[];
   conversation_history?: ConversationMessage[];
 }

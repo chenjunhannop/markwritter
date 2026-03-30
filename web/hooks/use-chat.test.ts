@@ -49,6 +49,7 @@ vi.mock('@/lib/store', () => ({
         selectSession: mockSelectSession,
         deleteSession: mockDeleteSession,
         selectedSources: [],
+        setSelectedSources: vi.fn(),
         updateSessionTitle: vi.fn(),
         toggleSource: vi.fn(),
         addSources: vi.fn(),
@@ -109,6 +110,13 @@ describe('useChat Hook', () => {
       });
 
       expect(mockAddMessage).toHaveBeenCalledWith('user', 'Hello, world!');
+      expect(sendMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'Hello, world!',
+          session_id: 'test-session-id',
+        }),
+        expect.any(Object)
+      );
     });
 
     it('should set streaming state when sending', async () => {
@@ -218,12 +226,13 @@ describe('useChat Hook', () => {
           createSession: mockCreateSession,
           selectSession: mockSelectSession,
           deleteSession: mockDeleteSession,
-      selectedSources: [],
-      updateSessionTitle: vi.fn(),
-      toggleSource: vi.fn(),
-      addSources: vi.fn(),
-      removeSources: vi.fn(),
-      clearSources: vi.fn(),
+          selectedSources: [],
+          setSelectedSources: vi.fn(),
+          updateSessionTitle: vi.fn(),
+          toggleSource: vi.fn(),
+          addSources: vi.fn(),
+          removeSources: vi.fn(),
+          clearSources: vi.fn(),
         };
         return selector(state);
       });
@@ -249,12 +258,13 @@ describe('useChat Hook', () => {
           createSession: mockCreateSession,
           selectSession: mockSelectSession,
           deleteSession: mockDeleteSession,
-      selectedSources: [],
-      updateSessionTitle: vi.fn(),
-      toggleSource: vi.fn(),
-      addSources: vi.fn(),
-      removeSources: vi.fn(),
-      clearSources: vi.fn(),
+          selectedSources: [],
+          setSelectedSources: vi.fn(),
+          updateSessionTitle: vi.fn(),
+          toggleSource: vi.fn(),
+          addSources: vi.fn(),
+          removeSources: vi.fn(),
+          clearSources: vi.fn(),
         };
         return selector(state);
       });
@@ -358,12 +368,13 @@ describe('useChat Hook', () => {
           createSession: mockCreateSession,
           selectSession: mockSelectSession,
           deleteSession: mockDeleteSession,
-      selectedSources: [],
-      updateSessionTitle: vi.fn(),
-      toggleSource: vi.fn(),
-      addSources: vi.fn(),
-      removeSources: vi.fn(),
-      clearSources: vi.fn(),
+          selectedSources: [],
+          setSelectedSources: vi.fn(),
+          updateSessionTitle: vi.fn(),
+          toggleSource: vi.fn(),
+          addSources: vi.fn(),
+          removeSources: vi.fn(),
+          clearSources: vi.fn(),
         };
         return selector(state);
       });

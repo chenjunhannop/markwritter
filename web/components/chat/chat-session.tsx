@@ -15,9 +15,10 @@ import { Bot, User } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import type { Message } from '@/lib/types';
+import type { Citation, Message } from '@/lib/types';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { CitationBadge } from './citation-badge';
 
 interface ChatSessionProps {
   /** Messages to display */
@@ -107,6 +108,75 @@ function renderMarkdown(content: string): React.ReactNode {
   );
 }
 
+function renderInlineMarkdown(content: string): React.ReactNode {
+  return (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      components={{
+        p: ({ children }) => <>{children}</>,
+        code: ({ className, children, ...props }) => {
+          const isInline = !className;
+          if (isInline) {
+            return (
+              <code className="bg-muted px-1 py-0.5 rounded text-sm" {...props}>
+                {children}
+              </code>
+            );
+          }
+          return (
+            <code className={className} {...props}>
+              {children}
+            </code>
+          );
+        },
+        a: ({ href, children }) => (
+          <a
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary underline hover:text-primary/80"
+          >
+            {children}
+          </a>
+        ),
+      }}
+    >
+      {content}
+    </ReactMarkdown>
+  );
+}
+
+function renderMessageContent(content: string, citations?: Citation[]): React.ReactNode {
+  if (!citations || citations.length === 0) {
+    return renderMarkdown(content);
+  }
+
+  const parts = content.split(/(\[\d+\])/g);
+
+  return (
+    <div className="whitespace-pre-wrap break-words">
+      {parts.map((part, index) => {
+        const match = part.match(/^\[(\d+)\]$/);
+        if (match) {
+          const citationIndex = Number.parseInt(match[1], 10) - 1;
+          const citation = citations[citationIndex];
+          if (citation) {
+            return (
+              <CitationBadge
+                key={`citation-${index}`}
+                number={citationIndex + 1}
+                citation={citation}
+              />
+            );
+          }
+        }
+
+        return <span key={`text-${index}`}>{renderInlineMarkdown(part)}</span>;
+      })}
+    </div>
+  );
+}
+
 /**
  * Single message component
  */
@@ -149,7 +219,7 @@ const MessageItem = memo(function MessageItem({
           )}
         >
           <div className="whitespace-pre-wrap break-words">
-            {renderMarkdown(message.content)}
+            {renderMessageContent(message.content, message.citations)}
           </div>
         </div>
         <span className="text-xs text-muted-foreground">

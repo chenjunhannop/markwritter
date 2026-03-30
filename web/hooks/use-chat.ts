@@ -13,7 +13,7 @@ import { sendMessage as apiSendMessage } from '@/lib/api';
 import { processSSEStream } from '@/lib/sse';
 import { useChatStore } from '@/lib/store';
 import { StreamBuffer, type StreamBufferCallbacks } from '@/lib/stream-buffer';
-import type { ChatEvent, Message } from '@/lib/types';
+import type { ChatEvent, Citation, Message } from '@/lib/types';
 
 /**
  * Hook return type
@@ -66,6 +66,7 @@ export function useChat(): UseChatReturn {
   const streamBufferRef = useRef<StreamBuffer | null>(null);
   const pendingMessageIdRef = useRef<string | null>(null);
   const accumulatedTextRef = useRef('');
+  const currentCitationsRef = useRef<Citation[]>([]);
 
   // Get current session messages
   const session = getCurrentSession();
@@ -88,7 +89,9 @@ export function useChat(): UseChatReturn {
 
       if (isComplete && pendingMessageIdRef.current === messageId) {
         // Add the complete message to store
-        addMessage('assistant', revealedText);
+        addMessage('assistant', revealedText, {
+          citations: currentCitationsRef.current,
+        });
         setCurrentResponse('');
         pendingMessageIdRef.current = null;
       }
@@ -113,7 +116,9 @@ export function useChat(): UseChatReturn {
 
       // If there's accumulated text that wasn't added yet
       if (accumulatedTextRef.current && pendingMessageIdRef.current) {
-        addMessage('assistant', accumulatedTextRef.current);
+        addMessage('assistant', accumulatedTextRef.current, {
+          citations: currentCitationsRef.current,
+        });
         setCurrentResponse('');
         accumulatedTextRef.current = '';
         pendingMessageIdRef.current = null;
@@ -172,6 +177,7 @@ export function useChat(): UseChatReturn {
       setError(null);
       lastMessageRef.current = trimmed;
       accumulatedTextRef.current = '';
+      currentCitationsRef.current = [];
 
       // Add user message
       addMessage('user', trimmed);
@@ -202,11 +208,17 @@ export function useChat(): UseChatReturn {
           content: m.content,
         }));
 
-        const response = await apiSendMessage(trimmed, {
-          sources: selectedSources.length > 0 ? selectedSources : undefined,
-          conversationHistory: conversationHistory.length > 0 ? conversationHistory : undefined,
-          signal: abortControllerRef.current.signal,
-        });
+        const response = await apiSendMessage(
+          {
+            message: trimmed,
+            session_id: currentSessionId,
+            sources: selectedSources,
+            conversation_history: conversationHistory,
+          },
+          {
+            signal: abortControllerRef.current.signal,
+          }
+        );
 
         // Start the buffer tick loop BEFORE processing SSE stream
         // This ensures text is revealed progressively (typewriter effect)
@@ -224,6 +236,17 @@ export function useChat(): UseChatReturn {
               if (event.content) {
                 buffer.pushText(messageId, event.content);
                 accumulatedTextRef.current += event.content;
+              }
+              break;
+
+            case 'citation':
+              if (event.content) {
+                try {
+                  const parsed = JSON.parse(event.content) as Citation[] | Citation;
+                  currentCitationsRef.current = Array.isArray(parsed) ? parsed : [parsed];
+                } catch {
+                  currentCitationsRef.current = [];
+                }
               }
               break;
 
@@ -274,6 +297,7 @@ export function useChat(): UseChatReturn {
     setStreaming(false);
     setIsThinking(false);
     setCurrentResponse('');
+    currentCitationsRef.current = [];
   }, [setStreaming]);
 
   /**

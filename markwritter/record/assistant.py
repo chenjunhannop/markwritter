@@ -8,6 +8,7 @@ This module provides:
 from __future__ import annotations
 
 import json
+import inspect
 import logging
 import re
 from typing import TYPE_CHECKING, Any, AsyncGenerator, Optional
@@ -145,14 +146,17 @@ Polished text:"""
         tokens = max_tokens or self.max_tokens
 
         try:
-            # Check if llm_client has streaming support
-            if hasattr(self.llm_client, "stream_complete"):
-                async for chunk in self.llm_client.stream_complete(prompt, max_tokens=tokens):
-                    yield chunk
-            else:
-                # Fallback to non-streaming
-                result = self.llm_client.complete(prompt, max_tokens=tokens)
-                yield result.strip()
+            stream_complete = getattr(self.llm_client, "stream_complete", None)
+            if callable(stream_complete):
+                stream = stream_complete(prompt, max_tokens=tokens)
+                if inspect.isasyncgen(stream):
+                    async for chunk in stream:
+                        yield chunk
+                    return
+
+            # Fallback to non-streaming
+            result = self.llm_client.complete(prompt, max_tokens=tokens)
+            yield result.strip()
         except Exception as e:
             logger.error(f"Error in continue_writing_stream: {e}")
             yield f"Error generating continuation: {str(e)}"

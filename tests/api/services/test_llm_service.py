@@ -3,6 +3,7 @@
 TDD approach: Tests written before implementation.
 """
 
+from collections.abc import AsyncGenerator
 from typing import Optional
 from unittest.mock import MagicMock, patch
 
@@ -23,6 +24,12 @@ def mock_llm_client() -> MagicMock:
     client.complete = MagicMock(return_value="LLM response")
     client.chat_complete = MagicMock(return_value="Chat response")
     client.complete_with_capability = MagicMock(return_value="Capability response")
+
+    async def _stream_complete(**kwargs) -> AsyncGenerator[str, None]:
+        yield "Hello"
+        yield " world"
+
+    client.stream_complete = MagicMock(side_effect=_stream_complete)
     return client
 
 
@@ -211,3 +218,21 @@ class TestLLMServiceValidation:
 
         # Should handle gracefully
         assert result is not None
+
+
+class TestLLMServiceStreaming:
+    """Test streaming chat completion through LLMService."""
+
+    @pytest.mark.asyncio
+    async def test_stream_complete(self, mock_llm_client: MagicMock) -> None:
+        """Test streaming tokens are passed through."""
+        from markwritter.api.services.llm_service import LLMService
+
+        service = LLMService(llm_client=mock_llm_client)
+
+        chunks: list[str] = []
+        async for token in service.stream_complete(messages=[{"role": "user", "content": "Hi"}]):
+            chunks.append(token)
+
+        assert chunks == ["Hello", " world"]
+        mock_llm_client.stream_complete.assert_called_once()

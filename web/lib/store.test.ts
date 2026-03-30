@@ -26,6 +26,7 @@ const resetStores = () => {
     sessions: [],
     currentSessionId: null,
     isStreaming: false,
+    selectedSources: [],
   });
   useSkillStore.setState({
     skills: [],
@@ -162,6 +163,38 @@ describe('useChatStore', () => {
 
       store.setStreaming(false);
       expect(useChatStore.getState().isStreaming).toBe(false);
+    });
+
+    it('should add citations to assistant messages', () => {
+      const store = useChatStore.getState();
+      store.createSession('Test');
+
+      store.addMessage('assistant', 'Answer [1]', {
+        citations: [
+          {
+            file_path: 'notes/a.md',
+            page_num: 0,
+            paragraph_idx: 0,
+            text_snippet: 'Source text',
+          },
+        ],
+      });
+
+      const message = useChatStore.getState().sessions[0].messages[0];
+      expect(message.citations).toHaveLength(1);
+    });
+  });
+
+  describe('selectedSources', () => {
+    it('should sync selected sources into the current session', () => {
+      const store = useChatStore.getState();
+      const sessionId = store.createSession('Test');
+
+      store.setSelectedSources(['notes/a.md']);
+
+      const session = useChatStore.getState().sessions.find((item) => item.id === sessionId);
+      expect(useChatStore.getState().selectedSources).toEqual(['notes/a.md']);
+      expect(session?.selectedSources).toEqual(['notes/a.md']);
     });
   });
 
@@ -321,4 +354,3 @@ describe('NavItem type extension (Phase 2)', () => {
     store.setActiveNav('chat');
   });
 });
-

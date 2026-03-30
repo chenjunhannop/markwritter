@@ -13,6 +13,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { getSettings as fetchRemoteSettings, updateSettings as persistRemoteSettings } from '@/lib/api';
 
 // ==================== Types ====================
 
@@ -108,6 +109,20 @@ function normalizePath(path: string): string {
 function maskApiKey(key: string): string {
   if (!key || key.length < 8) return '';
   return `${key.substring(0, 3)}...${key.substring(key.length - 3)}`;
+}
+
+function normalizeErrorMessage(
+  error: unknown,
+  fallback: string,
+  networkFallback = 'Network error'
+): string {
+  if (!(error instanceof Error)) {
+    return fallback;
+  }
+  if (error.message === 'fetch failed') {
+    return networkFallback;
+  }
+  return error.message;
 }
 
 // ==================== Secure Encryption (Web Crypto API) ====================
@@ -488,8 +503,7 @@ export const useSettingsStore = create<SettingsStore>()(
       fetchSettings: async () => {
         set({ isLoading: true, error: null });
         try {
-          const { getSettings } = await import('@/lib/api');
-          const remote = await getSettings();
+          const remote = await fetchRemoteSettings();
           const updates: Partial<SettingsState> = {};
           if (remote.theme) updates.theme = remote.theme;
           if (remote.language) updates.language = remote.language;
@@ -497,7 +511,7 @@ export const useSettingsStore = create<SettingsStore>()(
             set(updates);
           }
         } catch (error) {
-          const msg = error instanceof Error ? error.message : 'Failed to fetch settings';
+          const msg = normalizeErrorMessage(error, 'Failed to fetch settings');
           set({ error: msg });
         } finally {
           set({ isLoading: false });
@@ -507,14 +521,13 @@ export const useSettingsStore = create<SettingsStore>()(
       syncSettings: async () => {
         set({ isSaving: true });
         try {
-          const { updateSettings } = await import('@/lib/api');
           const state = get();
-          await updateSettings({
+          await persistRemoteSettings({
             theme: state.theme,
             language: state.language,
           });
         } catch (error) {
-          const msg = error instanceof Error ? error.message : 'Failed to save settings';
+          const msg = normalizeErrorMessage(error, 'Failed to save settings');
           set({ error: msg });
         } finally {
           set({ isSaving: false });

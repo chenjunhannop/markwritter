@@ -24,10 +24,15 @@ interface ChatState {
   updateSessionTitle: (sessionId: string, title: string) => void;
 
   // Message actions
-  addMessage: (role: MessageRole, content: string) => void;
+  addMessage: (
+    role: MessageRole,
+    content: string,
+    options?: { citations?: Message['citations'] }
+  ) => void;
   updateMessage: (sessionId: string, messageId: string, content: string) => void;
 
   // Source actions
+  setSelectedSources: (paths: string[]) => void;
   toggleSource: (path: string) => void;
   addSources: (paths: string[]) => void;
   removeSources: (paths: string[]) => void;
@@ -99,7 +104,7 @@ export const useChatStore = create<ChatState>()(
         }));
       },
 
-      addMessage: (role, content) => {
+      addMessage: (role, content, options) => {
         const state = get();
         if (!state.currentSessionId) return;
 
@@ -107,6 +112,7 @@ export const useChatStore = create<ChatState>()(
           id: crypto.randomUUID(),
           role,
           content,
+          citations: options?.citations,
           timestamp: Date.now(),
         };
 
@@ -139,13 +145,41 @@ export const useChatStore = create<ChatState>()(
         }));
       },
 
+      setSelectedSources: (paths) => {
+        set((state) => {
+          const nextSelectedSources = [...paths];
+          return {
+            selectedSources: nextSelectedSources,
+            sessions: state.sessions.map((session) =>
+              session.id === state.currentSessionId
+                ? {
+                    ...session,
+                    selectedSources: nextSelectedSources,
+                    updatedAt: Date.now(),
+                  }
+                : session
+            ),
+          };
+        });
+      },
+
       toggleSource: (path) => {
         set((state) => {
           const has = state.selectedSources.includes(path);
+          const nextSelectedSources = has
+            ? state.selectedSources.filter((p) => p !== path)
+            : [...state.selectedSources, path];
           return {
-            selectedSources: has
-              ? state.selectedSources.filter((p) => p !== path)
-              : [...state.selectedSources, path],
+            selectedSources: nextSelectedSources,
+            sessions: state.sessions.map((session) =>
+              session.id === state.currentSessionId
+                ? {
+                    ...session,
+                    selectedSources: nextSelectedSources,
+                    updatedAt: Date.now(),
+                  }
+                : session
+            ),
           };
         });
       },
@@ -154,7 +188,19 @@ export const useChatStore = create<ChatState>()(
         set((state) => {
           const existing = new Set(state.selectedSources);
           const newPaths = paths.filter((p) => !existing.has(p));
-          return { selectedSources: [...state.selectedSources, ...newPaths] };
+          const nextSelectedSources = [...state.selectedSources, ...newPaths];
+          return {
+            selectedSources: nextSelectedSources,
+            sessions: state.sessions.map((session) =>
+              session.id === state.currentSessionId
+                ? {
+                    ...session,
+                    selectedSources: nextSelectedSources,
+                    updatedAt: Date.now(),
+                  }
+                : session
+            ),
+          };
         });
       },
 
@@ -162,11 +208,31 @@ export const useChatStore = create<ChatState>()(
         const removeSet = new Set(paths);
         set((state) => ({
           selectedSources: state.selectedSources.filter((p) => !removeSet.has(p)),
+          sessions: state.sessions.map((session) =>
+            session.id === state.currentSessionId
+              ? {
+                  ...session,
+                  selectedSources: session.selectedSources.filter((p) => !removeSet.has(p)),
+                  updatedAt: Date.now(),
+                }
+              : session
+          ),
         }));
       },
 
       clearSources: () => {
-        set({ selectedSources: [] });
+        set((state) => ({
+          selectedSources: [],
+          sessions: state.sessions.map((session) =>
+            session.id === state.currentSessionId
+              ? {
+                  ...session,
+                  selectedSources: [],
+                  updatedAt: Date.now(),
+                }
+              : session
+          ),
+        }));
       },
 
       setStreaming: (streaming) => {
@@ -192,6 +258,9 @@ export const useChatStore = create<ChatState>()(
           ...current,
           ...persistedState,
           sessions: migratedSessions,
+          selectedSources:
+            migratedSessions.find((session) => session.id === persistedState.currentSessionId)
+              ?.selectedSources ?? (persistedState.selectedSources as string[] | undefined) ?? [],
         };
       },
     }

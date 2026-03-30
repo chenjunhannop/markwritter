@@ -17,6 +17,9 @@ vi.stubEnv('NEXT_PUBLIC_API_URL', 'http://localhost:8000');
 // Import after mocking
 import {
   sendMessage,
+  selectSources,
+  getSelectedSources,
+  clearSelectedSources,
   getSkills,
   getSkill,
   executeSkill,
@@ -57,14 +60,14 @@ describe('API Client', () => {
         },
       });
 
-      await sendMessage('Hello, world!');
+      await sendMessage({ message: 'Hello, world!', session_id: 'session-1' });
 
       expect(mockFetch).toHaveBeenCalledWith(
         'http://localhost:8000/api/v1/chat/',
         expect.objectContaining({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: 'Hello, world!' }),
+          body: JSON.stringify({ message: 'Hello, world!', session_id: 'session-1' }),
         })
       );
     });
@@ -82,7 +85,7 @@ describe('API Client', () => {
       };
       mockFetch.mockResolvedValueOnce(mockResponse);
 
-      const result = await sendMessage('Test message');
+      const result = await sendMessage({ message: 'Test message', session_id: 'session-1' });
 
       expect(result).toBe(mockResponse);
     });
@@ -95,7 +98,9 @@ describe('API Client', () => {
         text: () => Promise.resolve('Server error details'),
       });
 
-      const error = await sendMessage('Test').catch((e) => e);
+      const error = await sendMessage({ message: 'Test', session_id: 'session-1' }).catch(
+        (e) => e
+      );
       expect(error).toBeInstanceOf(ApiError);
       expect(error.status).toBe(500);
       expect(error.message).toContain('500');
@@ -114,7 +119,10 @@ describe('API Client', () => {
         },
       });
 
-      await sendMessage('Test', { signal: controller.signal });
+      await sendMessage(
+        { message: 'Test', session_id: 'session-1' },
+        { signal: controller.signal }
+      );
 
       expect(mockFetch).toHaveBeenCalledWith(
         expect.any(String),
@@ -136,14 +144,120 @@ describe('API Client', () => {
         },
       });
 
-      await sendMessage('');
+      await sendMessage({ message: '', session_id: 'session-1' });
 
       expect(mockFetch).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({
-          body: JSON.stringify({ message: '' }),
+          body: JSON.stringify({ message: '', session_id: 'session-1' }),
         })
       );
+    });
+
+    it('should include sources and conversation history when provided', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        body: {
+          getReader: () => ({
+            read: vi.fn().mockResolvedValue({ done: true, value: undefined }),
+            releaseLock: vi.fn(),
+          }),
+        },
+      });
+
+      await sendMessage({
+        message: 'Question',
+        session_id: 'session-1',
+        sources: ['notes/a.md'],
+        conversation_history: [{ role: 'user', content: 'Earlier' }],
+      });
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          body: JSON.stringify({
+            message: 'Question',
+            session_id: 'session-1',
+            sources: ['notes/a.md'],
+            conversation_history: [{ role: 'user', content: 'Earlier' }],
+          }),
+        })
+      );
+    });
+  });
+
+  describe('source selection APIs', () => {
+    it('should persist selected sources', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () =>
+          Promise.resolve({
+            session_id: 'session-1',
+            selected_sources: ['notes/a.md'],
+            count: 1,
+          }),
+      });
+
+      const result = await selectSources({
+        session_id: 'session-1',
+        source_paths: ['notes/a.md'],
+      });
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'http://localhost:8000/api/v1/chat/sources',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({
+            session_id: 'session-1',
+            source_paths: ['notes/a.md'],
+          }),
+        })
+      );
+      expect(result.selected_sources).toEqual(['notes/a.md']);
+    });
+
+    it('should load selected sources', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () =>
+          Promise.resolve({
+            session_id: 'session-1',
+            selected_sources: ['notes/a.md'],
+            count: 1,
+          }),
+      });
+
+      const result = await getSelectedSources('session-1');
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'http://localhost:8000/api/v1/chat/sources?session_id=session-1',
+        expect.objectContaining({ method: 'GET' })
+      );
+      expect(result.count).toBe(1);
+    });
+
+    it('should clear selected sources', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () =>
+          Promise.resolve({
+            success: true,
+            session_id: 'session-1',
+            message: 'Sources cleared',
+          }),
+      });
+
+      const result = await clearSelectedSources('session-1');
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'http://localhost:8000/api/v1/chat/sources?session_id=session-1',
+        expect.objectContaining({ method: 'DELETE' })
+      );
+      expect(result.success).toBe(true);
     });
   });
 
