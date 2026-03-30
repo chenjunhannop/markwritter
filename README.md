@@ -133,7 +133,7 @@ markwritter chat
 
 ## Project Status
 
-### Completed
+### ✅ Completed (v0.1.1.0 - 2026-03-30)
 
 - [x] Core framework skeleton
 - [x] Registry and Parser
@@ -142,17 +142,26 @@ markwritter chat
 - [x] FastAPI backend
 - [x] Next.js frontend foundation
 - [x] LiteLLM integration
+- [x] **Chat with Sources MVP**
+  - [x] LangGraph chat orchestration
+  - [x] RAG search with source selection
+  - [x] Chat session persistence (SQLite)
+  - [x] SSE streaming with citations
+  - [x] Vector search cache
+  - [x] Path → ContentID resolver
+  - [x] Watchdog file watcher
 
-### In Progress
+### 🎯 In Progress (Phase 2)
 
-- [ ] memU memory service integration
-- [ ] Obsidian Vault file operations
-- [ ] Query module (semantic search, RAG)
-- [ ] Record module (editor, AI assist)
+- [ ] AI Writing Assist (continue, rewrite, polish)
+- [ ] Content Summarization (single & multi-note)
+- [ ] Knowledge Graph Basics (visualization, link suggestions)
 
-### Planned
+### 📋 Planned
 
-- [ ] Explore module (knowledge graph)
+- [ ] Web clipping (URL extraction, auto-tagging)
+- [ ] Vector search (pgvector/FAISS integration)
+- [ ] Voice recording (ASR integration)
 - [ ] Desktop app (Tauri)
 - [ ] Cloud sync
 - [ ] Plugin system

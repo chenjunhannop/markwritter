@@ -1,7 +1,7 @@
 # Markwritter Project Overview
 
-> **Last Updated:** 2026-03-23
-> **Version:** 1.0.0-alpha
+> **Last Updated:** 2026-03-30
+> **Version:** 0.1.1.0
 
 ---
 
@@ -176,31 +176,36 @@ Markwritter maintains 100% compatibility with Obsidian:
 
 ## Implementation Roadmap
 
-### Phase 1: MVP (4 weeks)
+### Phase 1: MVP ✅ (Completed 2026-03-30)
 
-- [ ] Python backend framework
-- [ ] memU integration
-- [ ] Obsidian Vault file operations
-- [ ] Keyword + semantic search
-- [ ] Basic note editor
-- [ ] Auto-classification
-- [ ] Next.js frontend
+- [x] Python backend framework
+- [x] memU integration
+- [x] Obsidian Vault file operations
+- [x] Keyword + semantic search
+- [x] Basic note editor
+- [x] Auto-classification
+- [x] Next.js frontend
+- [x] **Chat with Sources**
+  - [x] LangGraph-based RAG agent
+  - [x] Chat session persistence
+  - [x] Source selection API
+  - [x] SSE streaming with citations
 
-### Phase 2: Core Experience (3 weeks)
+### Phase 2: Core Experience (Current Priority)
 
-- [ ] Intelligent Q&A
-- [ ] AI writing assistance
-- [ ] Content summarization
+- [ ] Intelligent Q&A (enhanced RAG)
+- [ ] AI writing assistance (continue, rewrite, polish)
+- [ ] Content summarization (single & multi-note)
 - [ ] Knowledge graph basics
 - [ ] Relationship discovery
 
-### Phase 3: Enhanced Features (3 weeks)
+### Phase 3: Enhanced Features
 
 - [ ] Web clipping
 - [ ] Voice recording
 - [ ] Multi-vault support
 - [ ] Desktop app (Tauri)
-- [ ] Performance optimization
+- [ ] Performance optimization (vector search with pgvector)
 
 ### Phase 4: Ecosystem (Ongoing)
 

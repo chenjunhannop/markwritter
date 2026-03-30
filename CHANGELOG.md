@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.2.0] - 2026-03-30
+
+### Changed
+- **TODOS.md**: Updated roadmap, removed completed ENG-001~006 items, added Phase 2-4 priorities
+- **README.md**: Updated project status with completed MVP features
+- **docs/OVERVIEW.md**: Marked Phase 1 as completed, updated version to 0.1.1.0
+
+### Removed
+- Completed ENG-001~ENG-006 items moved to changelog history
+
+---
+
 ## [0.1.1.0] - 2026-03-30
 
 ### Added
