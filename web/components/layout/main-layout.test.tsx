@@ -31,10 +31,8 @@ describe('MainLayout', () => {
     (useUIStore as unknown as ReturnType<typeof vi.fn>).mockImplementation((selector?: (state: unknown) => unknown) => {
       const state = {
         sidebarCollapsed: false,
-        activeNav: 'chat',
         connectionStatus: 'connected',
         toggleSidebar: vi.fn(),
-        setActiveNav: vi.fn(),
         setConnectionStatus: vi.fn(),
       };
       return selector ? selector(state) : state;
@@ -125,10 +123,8 @@ describe('MainLayout', () => {
       (useUIStore as unknown as ReturnType<typeof vi.fn>).mockImplementation((selector?: (state: unknown) => unknown) => {
         const state = {
           sidebarCollapsed: true,
-          activeNav: 'chat',
           connectionStatus: 'connected',
           toggleSidebar: vi.fn(),
-          setActiveNav: vi.fn(),
           setConnectionStatus: vi.fn(),
         };
         return selector ? selector(state) : state;

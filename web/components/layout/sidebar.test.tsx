@@ -12,8 +12,9 @@ import { useUIStore } from '@/lib/store';
 
 // Mock next/navigation
 const mockPush = vi.fn();
+let mockPathname = '/chat';
 vi.mock('next/navigation', () => ({
-  usePathname: () => '/chat',
+  usePathname: () => mockPathname,
   useRouter: () => ({ push: mockPush }),
 }));
 
@@ -28,16 +29,13 @@ const renderWithProviders = (ui: React.ReactElement) => {
 
 describe('Sidebar', () => {
   const mockToggleSidebar = vi.fn();
-  const mockSetActiveNav = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
     (useUIStore as unknown as ReturnType<typeof vi.fn>).mockImplementation((selector?: (state: unknown) => unknown) => {
       const state = {
         sidebarCollapsed: false,
-        activeNav: 'chat',
         toggleSidebar: mockToggleSidebar,
-        setActiveNav: mockSetActiveNav,
       };
       return selector ? selector(state) : state;
     });
@@ -70,21 +68,17 @@ describe('Sidebar', () => {
       expect(chatButton).toHaveAttribute('data-active', 'true');
     });
 
-    it('should show different active item when changed', () => {
-      (useUIStore as unknown as ReturnType<typeof vi.fn>).mockImplementation((selector?: (state: unknown) => unknown) => {
-        const state = {
-          sidebarCollapsed: false,
-          activeNav: 'skills',
-          toggleSidebar: mockToggleSidebar,
-          setActiveNav: mockSetActiveNav,
-        };
-        return selector ? selector(state) : state;
-      });
+    it('should show different active item when pathname changes', () => {
+      mockPathname = '/skills';
 
       renderWithProviders(<Sidebar />);
 
       const skillsButton = screen.getByRole('button', { name: /skills/i });
       expect(skillsButton).toHaveAttribute('data-active', 'true');
+
+      // Chat should not be active
+      const chatButton = screen.getByRole('button', { name: /chat/i });
+      expect(chatButton).toHaveAttribute('data-active', 'false');
     });
   });
 
@@ -100,9 +94,7 @@ describe('Sidebar', () => {
       (useUIStore as unknown as ReturnType<typeof vi.fn>).mockImplementation((selector?: (state: unknown) => unknown) => {
         const state = {
           sidebarCollapsed: true,
-          activeNav: 'chat',
           toggleSidebar: mockToggleSidebar,
-          setActiveNav: mockSetActiveNav,
         };
         return selector ? selector(state) : state;
       });
@@ -117,9 +109,7 @@ describe('Sidebar', () => {
       (useUIStore as unknown as ReturnType<typeof vi.fn>).mockImplementation((selector?: (state: unknown) => unknown) => {
         const state = {
           sidebarCollapsed: true,
-          activeNav: 'chat',
           toggleSidebar: mockToggleSidebar,
-          setActiveNav: mockSetActiveNav,
         };
         return selector ? selector(state) : state;
       });
@@ -133,15 +123,6 @@ describe('Sidebar', () => {
   });
 
   describe('navigation interactions', () => {
-    it('should call setActiveNav when clicking nav item', () => {
-      renderWithProviders(<Sidebar />);
-
-      const skillsButton = screen.getByRole('button', { name: /skills/i });
-      fireEvent.click(skillsButton);
-
-      expect(mockSetActiveNav).toHaveBeenCalledWith('skills');
-    });
-
     it('should navigate to correct route when clicking nav item', () => {
       renderWithProviders(<Sidebar />);
 
@@ -157,9 +138,7 @@ describe('Sidebar', () => {
       (useUIStore as unknown as ReturnType<typeof vi.fn>).mockImplementation((selector?: (state: unknown) => unknown) => {
         const state = {
           sidebarCollapsed: true,
-          activeNav: 'chat',
           toggleSidebar: mockToggleSidebar,
-          setActiveNav: mockSetActiveNav,
         };
         return selector ? selector(state) : state;
       });

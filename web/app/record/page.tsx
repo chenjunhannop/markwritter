@@ -16,7 +16,7 @@ import { FileEdit, Zap } from 'lucide-react';
 
 function RecordContent() {
   return (
-    <div className="container mx-auto py-6 h-screen flex flex-col">
+    <div className="container mx-auto py-6 flex-1 flex flex-col min-h-0">
       <Tabs defaultValue="quick" className="flex-1 flex flex-col">
         <TabsList className="grid w-full max-w-md grid-cols-2 mb-6">
           <TabsTrigger value="quick" className="gap-2">

@@ -4,7 +4,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
-import { useUIStore, type NavItem } from '@/lib/store';
+import { useUIStore } from '@/lib/store';
 import { navItems } from '@/lib/nav-config';
 import { cn } from '@/lib/utils';
 
@@ -12,11 +12,8 @@ export function Sidebar() {
   const router = useRouter();
   const pathname = usePathname();
   const sidebarCollapsed = useUIStore((state) => state.sidebarCollapsed);
-  const activeNav = useUIStore((state) => state.activeNav);
-  const setActiveNav = useUIStore((state) => state.setActiveNav);
 
   const handleNavClick = (item: typeof navItems[number]) => {
-    setActiveNav(item.id as NavItem);
     router.push(item.path);
   };
 
@@ -43,7 +40,7 @@ export function Sidebar() {
       <div className="flex-1 py-4">
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = activeNav === item.id || pathname === item.path;
+          const isActive = pathname === item.path;
 
           return (
             <Tooltip key={item.id} delayDuration={0}>
