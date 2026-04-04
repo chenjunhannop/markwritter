@@ -136,18 +136,18 @@ test.describe('Chat Page', () => {
       await expect(main).toBeVisible({ timeout: 10000 });
     });
 
-    test('should display TopBar with brand name', async ({ chatPage }) => {
+    test('should display header with Chat title', async ({ chatPage }) => {
       await chatPage.goto();
 
       // Wait for page to load
       await chatPage.page.waitForLoadState('load');
 
-      // TopBar header should be visible
-      const topBar = chatPage.page.locator('header').first();
-      await expect(topBar).toBeVisible({ timeout: 10000 });
+      // Header should be visible with Chat title
+      const header = chatPage.page.locator('header').first();
+      await expect(header).toBeVisible({ timeout: 10000 });
 
-      // TopBar contains "Markwritter" brand
-      await expect(topBar.getByText('Markwritter')).toBeVisible();
+      // Header shows Chat page title
+      await expect(header.getByRole('heading', { name: 'Chat' })).toBeVisible();
     });
   });
 });

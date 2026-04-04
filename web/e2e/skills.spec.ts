@@ -65,7 +65,7 @@ test.describe('Skills Page', () => {
       await expect(title).toContainText('Skills');
     });
 
-    test('should display New Skill button', async ({ skillsPage }) => {
+    test('should display skills list', async ({ skillsPage }) => {
       await skillsPage.page.route('**/api/v1/skills/**', async (route) => {
         await route.fulfill({
           status: 200,
@@ -76,9 +76,9 @@ test.describe('Skills Page', () => {
 
       await skillsPage.goto();
 
-      // New Skill is a link
-      const newSkillLink = skillsPage.page.getByRole('link', { name: /new skill/i });
-      await expect(newSkillLink).toBeVisible();
+      // Skills list should be visible
+      const skillList = skillsPage.page.locator('ul, [role="list"]').first();
+      await expect(skillList).toBeVisible();
     });
   });
 

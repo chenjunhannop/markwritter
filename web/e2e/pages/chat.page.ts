@@ -8,9 +8,9 @@ import type { Page, Locator, Response } from '@playwright/test';
 import { BasePage } from './base.page';
 
 export class ChatPage extends BasePage {
-  // TopBar elements
-  readonly topBar: Locator;
-  readonly drawerMenuButton: Locator;
+  // Header elements
+  readonly header: Locator;
+  readonly sidebarToggleButton: Locator;
 
   // Panel elements
   readonly sourcesPanel: Locator;
@@ -37,9 +37,9 @@ export class ChatPage extends BasePage {
   constructor(page: Page) {
     super(page);
 
-    // TopBar
-    this.topBar = page.locator('header').first();
-    this.drawerMenuButton = this.topBar.getByRole('button', { name: '' }).first();
+    // Header (shared across all pages)
+    this.header = page.locator('header').first();
+    this.sidebarToggleButton = this.header.getByRole('button', { name: /toggle sidebar/i });
 
     // Panels (3-panel layout: Sources | Chat | Studio)
     this.sourcesPanel = page.locator('aside').first();
