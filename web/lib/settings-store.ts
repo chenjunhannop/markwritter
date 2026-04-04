@@ -507,6 +507,7 @@ export const useSettingsStore = create<SettingsStore>()(
           const updates: Partial<SettingsState> = {};
           if (remote.theme) updates.theme = remote.theme;
           if (remote.language) updates.language = remote.language;
+          if (remote.vault_path) updates.vaultPath = remote.vault_path;
           if (Object.keys(updates).length > 0) {
             set(updates);
           }
@@ -525,6 +526,7 @@ export const useSettingsStore = create<SettingsStore>()(
           await persistRemoteSettings({
             theme: state.theme,
             language: state.language,
+            vault_path: state.vaultPath,
           });
         } catch (error) {
           const msg = normalizeErrorMessage(error, 'Failed to save settings');

@@ -213,6 +213,7 @@ export async function executeSkill(
 export interface AppSettings {
   theme?: 'light' | 'dark' | 'system';
   language?: string;
+  vault_path?: string;
   [key: string]: unknown;
 }
 

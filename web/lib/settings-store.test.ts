@@ -689,6 +689,7 @@ describe('useSettingsStore', () => {
       expect(mockUpdateSettings).toHaveBeenCalledWith({
         theme: 'dark',
         language: 'zh',
+        vault_path: '',
       });
     });
 

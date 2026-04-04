@@ -113,10 +113,12 @@ class TestSettingsAPI:
         response = client.put("/api/v1/settings", json={"vault_path": "../etc/passwd"})
         assert response.status_code == 422
 
-    def test_invalid_vault_path_absolute_returns_422(self, client):
-        """PUT with vault_path as absolute path returns 422."""
-        response = client.put("/api/v1/settings", json={"vault_path": "/etc/passwd"})
-        assert response.status_code == 422
+    def test_valid_absolute_vault_path_accepted(self, client):
+        """PUT with vault_path as absolute path is accepted."""
+        response = client.put("/api/v1/settings", json={"vault_path": "/Users/test/vault"})
+        assert response.status_code == 200
+        data = response.json()
+        assert data["vault_path"] == "/Users/test/vault"
 
     # =========================================================================
     # Vault path traversal - HTTP level (belt and suspenders)

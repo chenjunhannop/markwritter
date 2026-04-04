@@ -154,12 +154,10 @@ class SettingsUpdateRequest(BaseModel):
     @field_validator("vault_path")
     @classmethod
     def validate_vault_path(cls, v: Optional[str]) -> Optional[str]:
-        """Validate vault_path has no path traversal or absolute paths."""
+        """Validate vault_path has no path traversal."""
         if v is not None:
             if ".." in v:
-                raise ValueError("Vault path must be relative (no '..' allowed)")
-            if v.startswith("/"):
-                raise ValueError("Vault path must be relative (no leading '/')")
+                raise ValueError("Vault path must not contain '..'")
         return v
 
 
