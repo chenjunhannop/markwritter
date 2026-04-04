@@ -1,21 +1,16 @@
 'use client';
 
 /**
- * ChatLayout - Three-panel layout container for the chat page.
- * Replaces MainLayout for the chat page only.
- *
- * Responsive behavior:
- * - Wide viewport (>= 900px): panels render as inline aside elements.
- * - Narrow viewport (< 900px): panels auto-collapse. When opened, they
- *   render as Sheet overlays (mobile drawer).
+ * ChatLayout - Three-panel layout for the chat page.
+ * Now shares Sidebar + Header with all other pages via MainLayout.
+ * The content area contains: Sources | ChatArea | AnswerContext.
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUIStore } from '@/lib/store';
-import { TopBar } from '@/components/layout/top-bar';
-import { DrawerNav } from '@/components/layout/drawer-nav';
+import { MainLayout } from '@/components/layout/main-layout';
 import { SourcesPanel } from '@/components/chat/sources-panel';
 import { AnswerContextPanel } from '@/components/chat/answer-context-panel';
 import {
@@ -36,15 +31,10 @@ export function ChatLayout({ children }: ChatLayoutProps) {
   const setLeftPanelCollapsed = useUIStore((s) => s.setLeftPanelCollapsed);
   const setRightPanelCollapsed = useUIStore((s) => s.setRightPanelCollapsed);
 
-  // Use state so viewport changes trigger re-renders.
   const [isNarrow, setIsNarrow] = useState(false);
-
-  // Track user preferences so we can restore them when viewport widens.
   const userPrefRef = useRef({ left: false, right: false });
-  // Track previous narrow state to detect transitions.
   const wasNarrowRef = useRef(false);
 
-  // Listen for viewport width changes.
   useEffect(() => {
     const mql = window.matchMedia(`(max-width: ${NARROW_BREAKPOINT}px)`);
 
@@ -53,7 +43,6 @@ export function ChatLayout({ children }: ChatLayoutProps) {
       const wasNarrow = wasNarrowRef.current;
 
       if (nowNarrow && !wasNarrow) {
-        // Transitioning from wide to narrow: save user preferences, then collapse.
         userPrefRef.current = {
           left: useUIStore.getState().leftPanelCollapsed,
           right: useUIStore.getState().rightPanelCollapsed,
@@ -61,7 +50,6 @@ export function ChatLayout({ children }: ChatLayoutProps) {
         useUIStore.getState().setLeftPanelCollapsed(true);
         useUIStore.getState().setRightPanelCollapsed(true);
       } else if (!nowNarrow && wasNarrow) {
-        // Transitioning from narrow to wide: restore user preferences.
         useUIStore.getState().setLeftPanelCollapsed(userPrefRef.current.left);
         useUIStore.getState().setRightPanelCollapsed(userPrefRef.current.right);
       }
@@ -70,7 +58,6 @@ export function ChatLayout({ children }: ChatLayoutProps) {
       setIsNarrow(nowNarrow);
     };
 
-    // Set initial state based on current viewport.
     const initialNarrow = mql.matches;
     wasNarrowRef.current = initialNarrow;
     if (initialNarrow) {
@@ -87,9 +74,6 @@ export function ChatLayout({ children }: ChatLayoutProps) {
     return () => mql.removeEventListener('change', handleChange);
   }, []);
 
-  // Derived: on narrow viewport, a panel is "open" only if the user explicitly toggled it.
-  // Since narrow auto-collapses both, we track this via the collapsed state.
-  // When collapsed=true + isNarrow, panels are hidden. Toggle to false = open as Sheet.
   const leftOpen = isNarrow && !leftPanelCollapsed;
   const rightOpen = isNarrow && !rightPanelCollapsed;
 
@@ -101,7 +85,6 @@ export function ChatLayout({ children }: ChatLayoutProps) {
     setRightPanelCollapsed(true);
   }, [setRightPanelCollapsed]);
 
-  // On narrow viewport, clicking expand strip opens the Sheet instead of inline.
   const handleExpandLeft = useCallback(() => {
     setLeftPanelCollapsed(false);
   }, [setLeftPanelCollapsed]);
@@ -111,12 +94,8 @@ export function ChatLayout({ children }: ChatLayoutProps) {
   }, [setRightPanelCollapsed]);
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-background">
-      <TopBar
-        onToggleDrawer={() => useUIStore.getState().setDrawerOpen(true)}
-      />
-
-      <div className="flex flex-1 overflow-hidden">
+    <MainLayout title="Chat">
+      <div className="flex h-full -m-4 overflow-hidden">
         {/* Left Panel: Sources (inline only on wide viewport) */}
         {!isNarrow && (
           <aside
@@ -129,7 +108,7 @@ export function ChatLayout({ children }: ChatLayoutProps) {
           </aside>
         )}
 
-        {/* Collapsed strip for left panel (visible on both viewport sizes when collapsed) */}
+        {/* Collapsed strip for left panel */}
         {leftPanelCollapsed && (
           <button
             onClick={handleExpandLeft}
@@ -143,7 +122,7 @@ export function ChatLayout({ children }: ChatLayoutProps) {
         {/* Center: Chat */}
         <main className="flex min-w-0 flex-1 flex-col">{children}</main>
 
-        {/* Collapsed strip for right panel (visible on both viewport sizes when collapsed) */}
+        {/* Collapsed strip for right panel */}
         {rightPanelCollapsed && (
           <button
             onClick={handleExpandRight}
@@ -182,8 +161,6 @@ export function ChatLayout({ children }: ChatLayoutProps) {
           <AnswerContextPanel />
         </SheetContent>
       </Sheet>
-
-      <DrawerNav />
-    </div>
+    </MainLayout>
   );
 }

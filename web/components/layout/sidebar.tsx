@@ -1,29 +1,12 @@
 'use client';
 
-import { MessageSquare, Boxes, FileText, Settings, GitGraph, Search, FileEdit } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
 import { useUIStore, type NavItem } from '@/lib/store';
+import { navItems } from '@/lib/nav-config';
 import { cn } from '@/lib/utils';
-
-interface NavItemConfig {
-  id: NavItem;
-  label: string;
-  icon: typeof MessageSquare;
-  path: string;
-}
-
-const navItems: NavItemConfig[] = [
-  { id: 'chat', label: 'Chat', icon: MessageSquare, path: '/chat' },
-  { id: 'skills', label: 'Skills', icon: Boxes, path: '/skills' },
-  { id: 'explore', label: 'Explore', icon: GitGraph, path: '/explore' },
-  { id: 'query', label: 'Query', icon: Search, path: '/query' },
-  { id: 'record', label: 'Record', icon: FileEdit, path: '/record' },
-  { id: 'logs', label: 'Logs', icon: FileText, path: '/logs' },
-  { id: 'settings', label: 'Settings', icon: Settings, path: '/settings' },
-];
 
 export function Sidebar() {
   const router = useRouter();
@@ -32,8 +15,8 @@ export function Sidebar() {
   const activeNav = useUIStore((state) => state.activeNav);
   const setActiveNav = useUIStore((state) => state.setActiveNav);
 
-  const handleNavClick = (item: NavItemConfig) => {
-    setActiveNav(item.id);
+  const handleNavClick = (item: typeof navItems[number]) => {
+    setActiveNav(item.id as NavItem);
     router.push(item.path);
   };
 
@@ -74,8 +57,8 @@ export function Sidebar() {
                   className={cn(
                     'w-full justify-start gap-3 px-3 mx-2 mb-1',
                     isActive
-                      ? 'bg-primary/10 text-primary hover:bg-primary/15'
-                      : 'hover:bg-muted'
+                      ? 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                      : 'hover:bg-accent hover:text-accent-foreground'
                   )}
                 >
                   <Icon className="w-5 h-5 shrink-0" />
