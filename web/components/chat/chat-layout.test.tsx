@@ -18,8 +18,8 @@ vi.mock('@/components/chat/sources-panel', () => ({
   SourcesPanel: () => <div data-testid="sources-panel">SourcesPanel</div>,
 }));
 
-vi.mock('@/components/chat/studio-panel', () => ({
-  StudioPanel: () => <div data-testid="studio-panel">StudioPanel</div>,
+vi.mock('@/components/chat/answer-context-panel', () => ({
+  AnswerContextPanel: () => <div data-testid="answer-context-panel">AnswerContextPanel</div>,
 }));
 
 vi.mock('@/components/layout/top-bar', () => ({
@@ -113,11 +113,11 @@ describe('ChatLayout', () => {
         </ChatLayout>
       );
 
-      const studioPanel = screen.getByTestId('studio-panel');
-      expect(studioPanel).toBeInTheDocument();
+      const answerContextPanel = screen.getByTestId('answer-context-panel');
+      expect(answerContextPanel).toBeInTheDocument();
 
       // Verify it is inside an <aside> element (not a Sheet overlay)
-      const asideElement = studioPanel.closest('aside');
+      const asideElement = answerContextPanel.closest('aside');
       expect(asideElement).toBeInTheDocument();
     });
 
@@ -327,7 +327,7 @@ describe('ChatLayout', () => {
       const sheetContents = document.querySelectorAll('[data-slot="sheet-content"]');
       expect(sheetContents.length).toBeGreaterThan(0);
 
-      expect(screen.getByTestId('studio-panel')).toBeInTheDocument();
+      expect(screen.getByTestId('answer-context-panel')).toBeInTheDocument();
     });
 
     it('should close Sheet and return to collapsed state on close', async () => {

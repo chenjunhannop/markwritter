@@ -630,7 +630,7 @@ describe('Record Store', () => {
       });
 
       // Verify aiRewrite was called WITHOUT recordId
-      expect(mockedAiRewrite).toHaveBeenCalledWith('original text');
+      expect(mockedAiRewrite).toHaveBeenCalledWith('original text', 'formal');
       expect(useRecordStore.getState().content).toBe('rewritten text');
     });
 

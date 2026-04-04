@@ -648,9 +648,6 @@ export const useRecordStore = create<RecordState>()((set, get) => ({
       canUndo: false,
     });
   },
-      });
-    }
-  },
 
   cancelStream: () => {
     const controller = get().abortController;

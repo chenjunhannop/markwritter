@@ -721,6 +721,7 @@ describe('Record API Client', () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             content: 'Original text',
+            style: 'formal',
           }),
         })
       );
@@ -743,7 +744,7 @@ describe('Record API Client', () => {
 
       const sentBody = JSON.parse(mockFetch.mock.calls[0][1].body);
       expect(sentBody).not.toHaveProperty('record_id');
-      expect(sentBody).toEqual({ content: 'rough' });
+      expect(sentBody).toEqual({ content: 'rough', style: 'formal' });
     });
 
     it('should throw ApiError on rewrite failure', async () => {

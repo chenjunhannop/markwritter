@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Wand2, RefreshCw, Sparkles, Square, CheckCircle, XCircle, Undo2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { DiffPreview } from './diff-preview';
+import { UnifiedDiffReview } from './unified-diff-review';
 
 interface AIAssistPanelProps {
   className?: string;
@@ -59,9 +59,10 @@ export function AIAssistPanel({ className }: AIAssistPanelProps) {
           </div>
         )}
 
-        {/* WRT-005-V1: Diff Preview */}
-        {showDiffPreview && baseContent && generatedContent && (
-          <DiffPreview
+        {/* WRT-005-V2: Unified Diff Review */}
+        {showDiffPreview && baseContent && generatedContent && diffResult && (
+          <UnifiedDiffReview
+            diff={diffResult.diff}
             original={baseContent}
             modified={generatedContent}
             onAccept={acceptDiff}

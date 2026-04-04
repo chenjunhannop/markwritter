@@ -18,7 +18,17 @@ const mockStore = {
   aiContinue: vi.fn(),
   aiRewrite: vi.fn(),
   aiPolish: vi.fn(),
+  aiRewriteWithDiff: vi.fn(),
+  aiPolishWithDiff: vi.fn(),
   cancelStream: vi.fn(),
+  showDiffPreview: false,
+  diffResult: null,
+  baseContent: null,
+  generatedContent: null,
+  acceptDiff: vi.fn(),
+  rejectDiff: vi.fn(),
+  undoLastAccept: vi.fn(),
+  canUndo: false,
 };
 
 vi.mock('@/lib/record-store', () => ({
@@ -122,7 +132,7 @@ describe('AIAssistPanel', () => {
       const rewriteButton = screen.getByText('Rewrite');
       await user.click(rewriteButton);
 
-      expect(mockStore.aiRewrite).toHaveBeenCalled();
+      expect(mockStore.aiRewriteWithDiff).toHaveBeenCalled();
     });
 
     it('should call aiPolish when Polish button clicked', async () => {
@@ -133,7 +143,7 @@ describe('AIAssistPanel', () => {
       const polishButton = screen.getByText('Polish');
       await user.click(polishButton);
 
-      expect(mockStore.aiPolish).toHaveBeenCalled();
+      expect(mockStore.aiPolishWithDiff).toHaveBeenCalled();
     });
 
     it('should call cancelStream when Cancel button clicked during streaming', async () => {
@@ -153,8 +163,8 @@ describe('AIAssistPanel', () => {
 
       render(<AIAssistPanel />);
 
-      // Continue should still work as it doesn't need content
-      expect(screen.getByText('Continue')).not.toBeDisabled();
+      // All buttons disabled when content is empty
+      expect(screen.getByText('Continue')).toBeDisabled();
       // Rewrite and Polish need content
       expect(screen.getByText('Rewrite')).toBeDisabled();
       expect(screen.getByText('Polish')).toBeDisabled();

@@ -17,7 +17,7 @@ import { useUIStore } from '@/lib/store';
 import { TopBar } from '@/components/layout/top-bar';
 import { DrawerNav } from '@/components/layout/drawer-nav';
 import { SourcesPanel } from '@/components/chat/sources-panel';
-import { StudioPanel } from '@/components/chat/studio-panel';
+import { AnswerContextPanel } from '@/components/chat/answer-context-panel';
 import {
   Sheet,
   SheetContent,
@@ -154,7 +154,7 @@ export function ChatLayout({ children }: ChatLayoutProps) {
           </button>
         )}
 
-        {/* Right Panel: Studio (inline only on wide viewport) */}
+        {/* Right Panel: Answer Context (inline only on wide viewport) */}
         {!isNarrow && (
           <aside
             className={cn(
@@ -162,7 +162,7 @@ export function ChatLayout({ children }: ChatLayoutProps) {
               rightPanelCollapsed ? 'w-0 overflow-hidden opacity-0' : 'w-[320px]'
             )}
           >
-            <StudioPanel />
+            <AnswerContextPanel />
           </aside>
         )}
       </div>
@@ -178,8 +178,8 @@ export function ChatLayout({ children }: ChatLayoutProps) {
       {/* Mobile Sheet for right panel */}
       <Sheet open={rightOpen} onOpenChange={(open) => { if (!open) closeRightSheet(); }}>
         <SheetContent side="right" className="p-0 w-[300px]" showCloseButton={true}>
-          <SheetTitle className="sr-only">Studio Panel</SheetTitle>
-          <StudioPanel />
+          <SheetTitle className="sr-only">Answer Context Panel</SheetTitle>
+          <AnswerContextPanel />
         </SheetContent>
       </Sheet>
 
