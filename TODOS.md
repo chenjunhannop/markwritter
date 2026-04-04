@@ -44,18 +44,137 @@ All ENG-001 ~ ENG-006 items have been completed as part of the Chat with Sources
 |----|------|-------------|--------|--------|
 | **WRT-001** | 真实模型 E2E | 前端→后端→真实 LLM→SSE 流式→应用结果全链路 | ~60% → 需完成 | 🔴 P0 |
 | **WRT-004** | 错误恢复完善 | 重试 + 错误详情 + Record 模块支持 | ~90% → 需完成 | 🔴 P0 |
-| **WRT-005** | Diff/预览 UX | 用户看到 AI 编辑的 diff，可接受/拒绝/撤销 | 新增 | 🔴 P0 |
+| **WRT-005-V1** | Diff 预览 (简化版) | 完成后显示 diff + Accept/Reject/Undo | 新增 | 🔴 P0 |
+| **WRT-005-V2** | Diff 预览 (完整版) | 流式词级 diff + DiffDecorator | 延后至 V1 后 | ⚪ P1 |
 | **WRT-006** | 错误分类 UX | 超时/模型/网络错误的清晰区分和提示 | 新增 | 🔴 P0 |
 | **WRT-003** | 上下文菜单 | 选中文本右键 AI 选项 | 延后 | ⚪ P2 |
 | **WRT-002** | SSE 流式端点 | 已完成 | ✅ Done | - |
 
 **完成标准** (全部需要才是 100%):
-- [ ] 用户选择文本 → 触发改写 → 请求 hits 真实模型 (非 mock)
-- [ ] 响应通过 SSE 流式返回到编辑器
-- [ ] 用户看到 diff 或预览
-- [ ] 用户可以接受、拒绝、重试、撤销
+
+**V1 完成标准**:
+- [ ] 移除"保存笔记"限制 — 允许在草稿上使用 AI
+- [ ] 用户选择文本 → 触发改写 → 等待完成 → 看到 diff 预览
+- [ ] 用户可以 Accept（替换选区）/ Reject（关闭）
+- [ ] Undo 支持（30 秒内）
+- [ ] 埋点记录：操作类型、文本长度、时间、accept/reject
+
+**V2 完成标准**:
+- [ ] 流式词级 diff 渲染
+- [ ] DiffDecorator 覆盖层与 textarea 同步
+- [ ] 部分接受/拒绝单个建议
 - [ ] 错误清晰区分：超时/模型/网络
 - [ ] 真实 E2E 测试覆盖，或记录真实响应的回归测试
+
+---
+
+## WRT-005 设计规范 (Design Review + Codex Review Approved)
+
+**设计策略**: V1 简化版 (1 个月交付) → V2 完整版 (差异化功能)
+
+### Codex 评审结论 (2026-04-04)
+
+> **Bottom line**: "Variant C is strong as a later differentiator. For this month's goal, I'd ship a simpler post-generation diff preview first."
+
+**核心风险**:
+1. 技术风险高 — `textarea` 需要镜像覆盖层，scroll sync/对齐/IME 都是坑
+2. 流式词级 diff 闪烁风险 — 范围不稳定，计算开销大
+3. 对 1 个月创业时间线过度工程化
+
+**成功指标评估**:
+- Accept 率 >50%：可能，但仅限于**小范围编辑**（段落/选中）
+- 使用率提升：有帮助，但更大摩擦是"必须先保存笔记"
+
+---
+
+### WRT-005 V1 (简化版 - 本月交付) | Completeness: 7/10
+
+**目标**: 快速交付，验证核心假设（diff 预览提升信任和接受率）
+
+| 特性 | 实现方式 | 状态 |
+|------|----------|------|
+| 作用范围 | 选中文本 / 当前段落 | 新增 |
+| 生成模式 | 等待完成，非流式 | ✅ 完成 |
+| Diff 显示 | 完成后显示 inline 或 side panel diff | ✅ 完成 |
+| 操作 | 一键 Accept / Reject / Undo | ✅ 完成 |
+| 移除限制 | 不需要保存笔记即可使用 AI | ✅ 完成 |
+| 埋点 | 操作类型、文本长度、时间、accept/reject | ✅ 完成 |
+
+**架构实现 (V1 完成)**:
+- [x] 后端：`DiffDelta` 和 `DiffResult` 数据类
+- [x] 后端：`_compute_simple_diff` 方法（V1 简单全量替换 diff）
+- [x] 后端：`rewrite_with_diff` 和 `polish_with_diff` 方法
+- [x] 后端：`/ai-assist/rewrite/diff` 和 `/ai-assist/polish/diff` 端点
+- [x] 后端：`/ai-assist/telemetry` 埋点端点
+- [x] 前端：`DiffDelta` 和 `AIRewriteWithDiffResponse`/`AIPolishWithDiffResponse` 类型
+- [x] 前端：`aiRewriteWithDiff` 和 `aiPolishWithDiff` API 函数
+- [x] 前端：`trackAITelemetry` 遥测函数
+- [x] 前端：`record-store.ts` diff 状态（`baseContent`, `generatedContent`, `showDiffPreview`, `diffResult`）
+- [x] 前端：`record-store.ts` 遥测状态（`aiStartTime`, `aiActionType`）
+- [x] 前端：`acceptDiff` 和 `rejectDiff` 动作（带遥测追踪）
+- [x] 前端：`undoLastAccept` 动作（30 秒超时）
+- [x] 前端：`DiffPreview` 组件（并排预览 + Accept/Reject 按钮）
+- [x] 前端：`AIAssistPanel` 集成 diff 预览和 Undo 按钮
+- [ ] 前端：支持选中文本操作（当前针对整个内容）
+
+**完成标准**:
+- [x] 后端 API 端点 `/ai-assist/rewrite/diff` 和 `/ai-assist/polish/diff`
+- [x] 后端 `WritingAssistant` 添加 `rewrite_with_diff` 和 `polish_with_diff` 方法
+- [x] 前端 API 客户端添加 `aiRewriteWithDiff` 和 `aiPolishWithDiff` 函数
+- [x] 前端 `record-store.ts` 添加 diff 状态管理（`baseContent`, `generatedContent`, `showDiffPreview`, `acceptDiff`, `rejectDiff`）
+- [x] 前端 `DiffPreview` 组件实现
+- [x] 前端 `AIAssistPanel` 集成 diff 预览
+- [ ] 移除"保存笔记"限制 — 允许在草稿上使用 AI
+- [ ] 用户选择文本 → 触发改写 → 等待完成 → 看到 diff 预览
+- [ ] 用户可以 Accept（替换选区）/ Reject（关闭）
+- [ ] Undo 支持（30 秒内）
+- [ ] 埋点记录：操作类型、文本长度、时间、accept/reject
+
+---
+
+### WRT-005 V2 (完整版 - 后续差异化) | Completeness: 10/10
+
+**目标**: 流式词级 diff，最佳用户体验，竞争差异化
+
+| 特性 | 实现方式 | 状态 |
+|------|----------|------|
+| 流式 diff | SSE 实时推送 diff 增量 | 延后 |
+| 词级高亮 | 绿色新增，红色删除线 | 延后 |
+| 覆盖层 | `DiffDecorator` 镜像 `textarea` | 延后 |
+| 部分接受 | 逐个建议 Accept/Reject | 延后 |
+| 段落级 | 自动检测当前段落 | 延后 |
+
+**架构影响 (V2)**:
+- 前端需要新增 `DiffDecorator` 组件层，覆盖在 `textarea` 之上
+- `record-store.ts` 需要扩展：`pendingDiff`, `acceptDiff()`, `rejectDiff()`, `undoDiff()`
+- 后端 SSE 需要支持 diff 格式：`{ type: 'diff_delta', additions: [...], deletions: [...] }`
+- 需要新的 `useDiffStream` hook 处理流式 diff 合并
+- 后端需要 diff 计算服务（词级/句子级）
+
+**交互状态表 (V2)**:
+
+| 状态 | 用户看到 | 用户操作 |
+|------|----------|----------|
+| **Idle** | 正常编辑器，AI 按钮可用 | 点击 Continue/Rewrite/Polish |
+| **Streaming** | 行内高亮显示 AI 生成内容，绿色背景 = 新增，红色删除线 = 删除 | 点击 Cancel 停止生成 |
+| **Complete** | 底部浮动条：显示更改数量，Accept All / Reject All 按钮 | 接受或拒绝 |
+| **Accepted** | 更改应用到编辑器，Toolbar 显示 Undo 按钮 (30 秒) | 点击 Undo 撤销 |
+| **Rejected** | 恢复原文，浮动条关闭 | — |
+| **Error** | 底部浮动条显示错误消息 + Retry 按钮 | 点击 Retry 重试 |
+
+**视觉规范 (V2)**:
+
+- **新增内容**: 背景色 `#dcfce7` (green-100)，文字 `#14532d` (green-900)
+- **删除内容**: 删除线，背景色 `#fee2e2` (red-100)，文字 `#450a0a` (red-900)，透明度 0.7
+- **替换内容**: 行内 badge 样式 `[原文 → 新文]`
+- **浮动条**: 固定在编辑器底部，白色背景，阴影，圆角 8px
+- **按钮**: Accept (primary, blue-500), Reject (outline, gray), Undo (ghost, 仅 accepted 后可用)
+
+### 设计 artifacts
+
+- 比较板：`~/.gstack/projects/chenjunhannop-markwritter/designs/ai-writing-diff-20260404/comparison-board.html`
+- 变体文档：`variant-A.txt`, `variant-B.txt`, `variant-C.txt`
+- Codex Review: `/Users/chenjunhan/.claude/projects/-Users-chenjunhan-dev-github-project-markwritter/dcda5049-ad81-4c27-bd8f-c9808e3c74a2/tool-results/bi6vumesj.txt`
 
 ---
 

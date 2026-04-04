@@ -91,6 +91,42 @@ export interface AIPolishResponse {
 }
 
 /**
+ * Diff delta for V1 diff preview
+ */
+export interface DiffDelta {
+  /** Operation type: 'add', 'remove', 'replace', 'error' */
+  type: string;
+  /** New/modified text */
+  text: string;
+  /** Original text (for replace/remove) */
+  original?: string | null;
+}
+
+/**
+ * AI rewrite with diff response (WRT-005-V1)
+ */
+export interface AIRewriteWithDiffResponse {
+  /** Original content */
+  original: string;
+  /** Modified content */
+  modified: string;
+  /** Diff operations */
+  diff: DiffDelta[];
+}
+
+/**
+ * AI polish with diff response (WRT-005-V1)
+ */
+export interface AIPolishWithDiffResponse {
+  /** Original content */
+  original: string;
+  /** Modified content */
+  modified: string;
+  /** Diff operations */
+  diff: DiffDelta[];
+}
+
+/**
  * Classification response
  */
 export interface ClassifyResponse {
@@ -375,11 +411,13 @@ export async function aiContinueStream(
  * Request AI to rewrite content.
  *
  * @param content - Content to rewrite
+ * @param style - Rewrite style (default: 'formal')
  * @returns Rewritten content
  * @throws ApiError if the request fails
  */
 export async function aiRewrite(
-  content: string
+  content: string,
+  style: string = 'formal'
 ): Promise<AIRewriteResponse> {
   const response = await fetch(
     `${API_BASE}/api/v1/record/ai-assist/rewrite`,
@@ -388,6 +426,7 @@ export async function aiRewrite(
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         content,
+        style,
       }),
     }
   );
@@ -425,6 +464,106 @@ export async function aiPolish(
   }
 
   return response.json();
+}
+
+/**
+ * Request AI to rewrite content with diff (WRT-005-V1).
+ *
+ * @param content - Content to rewrite
+ * @param style - Rewrite style (default: 'formal')
+ * @returns Rewritten content with diff operations
+ * @throws ApiError if the request fails
+ */
+export async function aiRewriteWithDiff(
+  content: string,
+  style: string = 'formal'
+): Promise<AIRewriteWithDiffResponse> {
+  const response = await fetch(
+    `${API_BASE}/api/v1/record/ai-assist/rewrite/diff`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        content,
+        style,
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    throw await createApiError(response);
+  }
+
+  return response.json();
+}
+
+/**
+ * Request AI to polish content with diff (WRT-005-V1).
+ *
+ * @param content - Content to polish
+ * @returns Polished content with diff operations
+ * @throws ApiError if the request fails
+ */
+export async function aiPolishWithDiff(
+  content: string
+): Promise<AIPolishWithDiffResponse> {
+  const response = await fetch(
+    `${API_BASE}/api/v1/record/ai-assist/polish/diff`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        content,
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    throw await createApiError(response);
+  }
+
+  return response.json();
+}
+
+/**
+ * AI telemetry event (WRT-005-V1)
+ */
+export interface AITelemetryRequest {
+  /** Action type: 'rewrite', 'polish', 'continue' */
+  action: string;
+  /** Length of text processed */
+  text_length: number;
+  /** Time to result in milliseconds */
+  time_to_result_ms?: number;
+  /** Whether user accepted the result */
+  accepted?: boolean;
+  /** Error message if failed */
+  error?: string;
+  /** Additional metadata */
+  metadata?: Record<string, unknown>;
+}
+
+/**
+ * Track AI assistance usage (WRT-005-V1).
+ *
+ * @param event - Telemetry event data
+ * @throws ApiError if the request fails
+ */
+export async function trackAITelemetry(
+  event: AITelemetryRequest
+): Promise<void> {
+  const response = await fetch(
+    `${API_BASE}/api/v1/record/ai-assist/telemetry`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(event),
+    }
+  );
+
+  if (!response.ok) {
+    throw await createApiError(response);
+  }
 }
 
 // ==================== Classification ====================

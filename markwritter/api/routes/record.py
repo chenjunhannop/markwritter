@@ -174,6 +174,22 @@ class PolishResponse(BaseModel):
     polished: str
 
 
+class RewriteWithDiffResponse(BaseModel):
+    """Response model for rewrite with diff."""
+
+    original: str
+    modified: str
+    diff: list[dict]  # Serialized DiffDelta
+
+
+class PolishWithDiffResponse(BaseModel):
+    """Response model for polish with diff."""
+
+    original: str
+    modified: str
+    diff: list[dict]  # Serialized DiffDelta
+
+
 class ClassifyRequest(BaseModel):
     """Request model for classification."""
 
@@ -228,6 +244,24 @@ class SuggestLinksResponse(BaseModel):
     """Response model for link suggestion."""
 
     links: list[str]
+
+
+class AITelemetryEvent(BaseModel):
+    """Request model for AI telemetry tracking (WRT-005-V1)."""
+
+    action: str  # 'rewrite', 'polish', 'continue'
+    text_length: int
+    time_to_result_ms: Optional[int] = None
+    accepted: Optional[bool] = None
+    error: Optional[str] = None
+    metadata: Optional[dict[str, Any]] = None
+
+
+class AITelemetryResponse(BaseModel):
+    """Response model for AI telemetry tracking."""
+
+    success: bool
+    event_id: Optional[str] = None
 
 
 # ==============================================================================
@@ -786,6 +820,100 @@ async def polish_stream(
 
 
 # ==============================================================================
+# Diff Endpoints (WRT-005-V1)
+# ==============================================================================
+
+
+@router.post(
+    "/ai-assist/rewrite/diff",
+    response_model=RewriteWithDiffResponse,
+    summary="Rewrite text with diff",
+    description="Rewrite text in a different style and return diff result (WRT-005-V1)",
+)
+async def rewrite_with_diff(
+    request: RewriteRequest,
+    writing_assistant: Optional[WritingAssistant] = Depends(get_writing_assistant),
+) -> RewriteWithDiffResponse:
+    """Rewrite content and return diff result.
+
+    Args:
+        request: Rewrite request
+        writing_assistant: Injected WritingAssistant instance
+
+    Returns:
+        RewriteWithDiffResponse with original, modified, and diff operations
+    """
+    if not writing_assistant:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Writing assistant not configured",
+        )
+
+    try:
+        result = await writing_assistant.rewrite_with_diff(
+            content=request.content,
+            style=request.style,
+            max_tokens=request.max_tokens,
+        )
+
+        return RewriteWithDiffResponse(
+            original=result.original,
+            modified=result.modified,
+            diff=[{"type": d.type, "text": d.text, "original": d.original} for d in result.diff],
+        )
+    except Exception as e:
+        logger.error(f"Error in rewrite_with_diff: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
+
+
+@router.post(
+    "/ai-assist/polish/diff",
+    response_model=PolishWithDiffResponse,
+    summary="Polish text with diff",
+    description="Improve grammar, clarity, and flow and return diff result (WRT-005-V1)",
+)
+async def polish_with_diff(
+    request: PolishRequest,
+    writing_assistant: Optional[WritingAssistant] = Depends(get_writing_assistant),
+) -> PolishWithDiffResponse:
+    """Polish content and return diff result.
+
+    Args:
+        request: Polish request
+        writing_assistant: Injected WritingAssistant instance
+
+    Returns:
+        PolishWithDiffResponse with original, modified, and diff operations
+    """
+    if not writing_assistant:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Writing assistant not configured",
+        )
+
+    try:
+        result = await writing_assistant.polish_with_diff(
+            content=request.content,
+            max_tokens=request.max_tokens,
+        )
+
+        return PolishWithDiffResponse(
+            original=result.original,
+            modified=result.modified,
+            diff=[{"type": d.type, "text": d.text, "original": d.original} for d in result.diff],
+        )
+    except Exception as e:
+        logger.error(f"Error in polish_with_diff: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
+
+
+# ==============================================================================
 # Classification Endpoints
 # ==============================================================================
 
@@ -954,3 +1082,49 @@ async def suggest_links(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e),
         )
+
+
+# ==============================================================================
+# Telemetry Endpoints (WRT-005-V1)
+# ==============================================================================
+
+# In-memory telemetry storage (replace with database in production)
+_ai_telemetry_events: list[dict[str, Any]] = []
+
+
+@router.post(
+    "/ai-assist/telemetry",
+    response_model=AITelemetryResponse,
+    summary="Track AI assistance event",
+    description="Track AI assistance usage for analytics (WRT-005-V1)",
+)
+async def track_ai_telemetry(
+    request: AITelemetryEvent,
+) -> AITelemetryResponse:
+    """Track AI assistance usage.
+
+    Args:
+        request: Telemetry event with action, text_length, time_to_result, accepted, etc.
+
+    Returns:
+        Success confirmation with event ID
+    """
+    try:
+        event = {
+            "timestamp": __import__("datetime").datetime.utcnow().isoformat(),
+            "action": request.action,
+            "text_length": request.text_length,
+            "time_to_result_ms": request.time_to_result_ms,
+            "accepted": request.accepted,
+            "error": request.error,
+            "metadata": request.metadata,
+        }
+        _ai_telemetry_events.append(event)
+        event_id = f"evt_{len(_ai_telemetry_events)}"
+
+        logger.info(f"AI telemetry event: {request.action}, accepted={request.accepted}")
+
+        return AITelemetryResponse(success=True, event_id=event_id)
+    except Exception as e:
+        logger.error(f"Error tracking telemetry: {e}")
+        return AITelemetryResponse(success=True)  # Don't fail on telemetry errors

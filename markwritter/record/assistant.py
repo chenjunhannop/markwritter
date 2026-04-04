@@ -3,6 +3,7 @@
 This module provides:
 - WritingAssistant: AI-powered writing assistance (continue, rewrite, polish)
 - AutoClassifier: Automatic note classification and tagging
+- DiffResult: Data model for diff operations
 """
 
 from __future__ import annotations
@@ -12,6 +13,7 @@ import inspect
 import logging
 import re
 from typing import TYPE_CHECKING, Any, AsyncGenerator, Optional
+from dataclasses import dataclass
 
 from pydantic import BaseModel, Field
 
@@ -19,6 +21,22 @@ if TYPE_CHECKING:
     from markwritter.llm_client import LLMClient
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class DiffDelta:
+    """A single diff operation."""
+    type: str  # 'add', 'remove', 'replace'
+    text: str
+    original: Optional[str] = None
+
+
+@dataclass
+class DiffResult:
+    """Result of AI operation with diff information."""
+    original: str
+    modified: str
+    diff: list[DiffDelta]
 
 
 # ==============================================================================
@@ -320,6 +338,118 @@ Polished text:"""
         except Exception as e:
             logger.error(f"Error in polish_stream: {e}")
             yield f"Error polishing content: {str(e)}"
+
+    async def rewrite_with_diff(
+        self,
+        content: str,
+        style: str = "formal",
+        max_tokens: Optional[int] = None,
+    ) -> DiffResult:
+        """Rewrite content and return diff result.
+
+        Args:
+            content: The content to rewrite.
+            style: The target style (formal, casual, academic, creative, concise).
+            max_tokens: Maximum tokens for output.
+
+        Returns:
+            DiffResult with original, modified, and diff operations.
+        """
+        if not content or not content.strip():
+            return DiffResult(
+                original=content,
+                modified="Please provide content to rewrite.",
+                diff=[DiffDelta(type="add", text="Please provide content to rewrite.")]
+            )
+
+        style = style.lower()
+        if style not in self.STYLES:
+            style = "formal"
+
+        prompt = self.REWRITE_PROMPT.format(content=content, style=style)
+        tokens = max_tokens or self.max_tokens
+
+        try:
+            result = self.llm_client.chat_complete(
+                [{"role": "user", "content": prompt}],
+                max_tokens=tokens,
+            )
+            modified = result.strip()
+            diff = self._compute_simple_diff(content, modified)
+            return DiffResult(original=content, modified=modified, diff=diff)
+        except Exception as e:
+            logger.error(f"Error in rewrite_with_diff: {e}")
+            return DiffResult(
+                original=content,
+                modified=f"Error: {str(e)}",
+                diff=[DiffDelta(type="error", text=str(e))]
+            )
+
+    async def polish_with_diff(
+        self,
+        content: str,
+        max_tokens: Optional[int] = None,
+    ) -> DiffResult:
+        """Polish content and return diff result.
+
+        Args:
+            content: The content to polish.
+            max_tokens: Maximum tokens for output.
+
+        Returns:
+            DiffResult with original, modified, and diff operations.
+        """
+        if not content or not content.strip():
+            return DiffResult(
+                original=content,
+                modified="Please provide content to polish.",
+                diff=[DiffDelta(type="add", text="Please provide content to polish.")]
+            )
+
+        prompt = self.POLISH_PROMPT.format(content=content)
+        tokens = max_tokens or self.max_tokens
+
+        try:
+            result = self.llm_client.chat_complete(
+                [{"role": "user", "content": prompt}],
+                max_tokens=tokens,
+            )
+            modified = result.strip()
+            diff = self._compute_simple_diff(content, modified)
+            return DiffResult(original=content, modified=modified, diff=diff)
+        except Exception as e:
+            logger.error(f"Error in polish_with_diff: {e}")
+            return DiffResult(
+                original=content,
+                modified=f"Error: {str(e)}",
+                diff=[DiffDelta(type="error", text=str(e))]
+            )
+
+    def _compute_simple_diff(self, original: str, modified: str) -> list[DiffDelta]:
+        """Compute a simple line-based diff between original and modified.
+
+        For V1, we use a simple approach: if text differs, mark entire content as replacement.
+        V2 will implement word-level diff with diff-match-patch library.
+
+        Args:
+            original: Original text
+            modified: Modified text after AI operation
+
+        Returns:
+            List of DiffDelta operations
+        """
+        if original == modified:
+            return []
+
+        # V1: Simple full-text replacement diff
+        # This is sufficient for V1 preview - V2 will add word-level highlighting
+        return [
+            DiffDelta(
+                type="replace",
+                text=modified,
+                original=original
+            )
+        ]
 
 
 # ==============================================================================

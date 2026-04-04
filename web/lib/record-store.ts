@@ -17,12 +17,17 @@ import {
   aiContinueStream,
   aiRewrite,
   aiPolish,
+  aiRewriteWithDiff,
+  aiPolishWithDiff,
   classifyNote,
   suggestTags,
   suggestFolder,
+  trackAITelemetry,
   type NoteResponse,
   type ClassifyResponse,
   type FolderSuggestionResponse,
+  type AIRewriteWithDiffResponse,
+  type AIPolishWithDiffResponse,
 } from './record-api';
 import { processSSEStream } from './sse';
 
@@ -105,6 +110,19 @@ interface RecordState {
   tagSuggestions: string[];
   folderSuggestion: FolderSuggestionResponse | null;
 
+  // Diff state (WRT-005-V1)
+  baseContent: string | null;  // Original content before AI operation
+  generatedContent: string | null;  // AI-generated content
+  showDiffPreview: boolean;  // Whether to show diff preview
+  diffResult: AIRewriteWithDiffResponse | AIPolishWithDiffResponse | null;  // Full diff result
+  aiStartTime: number | null;  // Timestamp when AI operation started
+  aiActionType: string | null;  // 'rewrite' or 'polish'
+
+  // Undo state (WRT-005-V1)
+  lastAcceptedContent: string | null;  // Content before accept (for undo)
+  lastAcceptTimestamp: number | null;  // Timestamp of last accept (for 30s timeout)
+  canUndo: boolean;  // Whether undo is available
+
   // Content actions
   setContent: (content: string) => void;
   setTitle: (title: string) => void;
@@ -122,8 +140,13 @@ interface RecordState {
 
   // AI assistance actions
   aiContinue: () => Promise<void>;
-  aiRewrite: () => Promise<void>;
+  aiRewrite: (style?: string) => Promise<void>;
   aiPolish: () => Promise<void>;
+  aiRewriteWithDiff: (style?: string) => Promise<void>;  // WRT-005-V1
+  aiPolishWithDiff: () => Promise<void>;  // WRT-005-V1
+  acceptDiff: () => void;  // Accept generated content
+  rejectDiff: () => void;  // Reject and restore original
+  undoLastAccept: () => void;  // Undo last accept (within 30s)
   cancelStream: () => void;
 
   // Classification actions
@@ -161,6 +184,19 @@ export const useRecordStore = create<RecordState>()((set, get) => ({
   classificationResult: null,
   tagSuggestions: [],
   folderSuggestion: null,
+
+  // Diff state (WRT-005-V1) - initialized to null/hidden
+  baseContent: null,
+  generatedContent: null,
+  showDiffPreview: false,
+  diffResult: null,
+  aiStartTime: null,
+  aiActionType: null,
+
+  // Undo state (WRT-005-V1) - initialized to null/disabled
+  lastAcceptedContent: null,
+  lastAcceptTimestamp: null,
+  canUndo: false,
 
   // Content actions
   setContent: (content) => {
@@ -392,7 +428,7 @@ export const useRecordStore = create<RecordState>()((set, get) => ({
     }
   },
 
-  aiRewrite: async () => {
+  aiRewrite: async (style = 'formal') => {
     const state = get();
 
     if (!state.currentRecord) {
@@ -402,7 +438,7 @@ export const useRecordStore = create<RecordState>()((set, get) => ({
     set({ isStreaming: true, streamError: null });
 
     try {
-      const result = await aiRewrite(state.content);
+      const result = await aiRewrite(state.content, style);
 
       set({
         content: result.rewritten,
@@ -438,6 +474,180 @@ export const useRecordStore = create<RecordState>()((set, get) => ({
       set({
         streamError: message,
         isStreaming: false,
+      });
+    }
+  },
+
+  // WRT-005-V1: Diff-based AI operations
+  aiRewriteWithDiff: async (style = 'formal') => {
+    const state = get();
+
+    if (!state.currentRecord) {
+      return;
+    }
+
+    set({ isStreaming: true, streamError: null, aiStartTime: Date.now(), aiActionType: 'rewrite' });
+
+    try {
+      const result = await aiRewriteWithDiff(state.content, style);
+
+      // Store original and generated content for diff preview
+      set({
+        baseContent: state.content,
+        generatedContent: result.modified,
+        diffResult: result,
+        showDiffPreview: true,
+        isStreaming: false,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Rewrite failed';
+      set({
+        streamError: message,
+        isStreaming: false,
+      });
+      // Track error telemetry
+      trackAITelemetry({
+        action: 'rewrite',
+        text_length: state.content.length,
+        error: message,
+      }).catch(() => {}); // Silently ignore telemetry errors
+    }
+  },
+
+  aiPolishWithDiff: async () => {
+    const state = get();
+
+    if (!state.currentRecord) {
+      return;
+    }
+
+    set({ isStreaming: true, streamError: null, aiStartTime: Date.now(), aiActionType: 'polish' });
+
+    try {
+      const result = await aiPolishWithDiff(state.content);
+
+      // Store original and generated content for diff preview
+      set({
+        baseContent: state.content,
+        generatedContent: result.modified,
+        diffResult: result,
+        showDiffPreview: true,
+        isStreaming: false,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Polish failed';
+      set({
+        streamError: message,
+        isStreaming: false,
+      });
+      // Track error telemetry
+      trackAITelemetry({
+        action: 'polish',
+        text_length: state.content.length,
+        error: message,
+      }).catch(() => {}); // Silently ignore telemetry errors
+    }
+  },
+
+  acceptDiff: () => {
+    const state = get();
+
+    if (state.generatedContent) {
+      // Store current content for undo (WRT-005-V1)
+      const now = Date.now();
+      const timeToResult = state.aiStartTime ? now - state.aiStartTime : undefined;
+
+      set({
+        content: state.generatedContent,
+        lastAcceptedContent: state.baseContent,  // Store original for undo
+        lastAcceptTimestamp: now,
+        canUndo: true,
+        baseContent: null,
+        generatedContent: null,
+        diffResult: null,
+        showDiffPreview: false,
+      });
+
+      // Track accept telemetry
+      if (state.aiActionType) {
+        trackAITelemetry({
+          action: state.aiActionType,
+          text_length: state.baseContent?.length ?? 0,
+          time_to_result_ms: timeToResult,
+          accepted: true,
+        }).catch(() => {}); // Silently ignore telemetry errors
+      }
+
+      // Auto-disable undo after 30 seconds
+      setTimeout(() => {
+        const currentState = get();
+        if (currentState.lastAcceptTimestamp && currentState.canUndo) {
+          set({
+            lastAcceptedContent: null,
+            lastAcceptTimestamp: null,
+            canUndo: false,
+          });
+        }
+      }, 30000);
+    }
+  },
+
+  rejectDiff: () => {
+    const state = get();
+
+    // Restore original content (baseContent)
+    if (state.baseContent) {
+      // Track reject telemetry
+      if (state.aiActionType) {
+        const timeToResult = state.aiStartTime ? Date.now() - state.aiStartTime : undefined;
+        trackAITelemetry({
+          action: state.aiActionType,
+          text_length: state.baseContent.length,
+          time_to_result_ms: timeToResult,
+          accepted: false,
+        }).catch(() => {}); // Silently ignore telemetry errors
+      }
+
+      set({
+        content: state.baseContent,
+        baseContent: null,
+        generatedContent: null,
+        diffResult: null,
+        showDiffPreview: false,
+        aiStartTime: null,
+        aiActionType: null,
+      });
+    }
+  },
+
+  undoLastAccept: () => {
+    const state = get();
+
+    if (!state.canUndo || !state.lastAcceptedContent || !state.lastAcceptTimestamp) {
+      return;
+    }
+
+    // Check if within 30 seconds
+    const now = Date.now();
+    const elapsed = now - state.lastAcceptTimestamp;
+    if (elapsed > 30000) {
+      // Undo expired
+      set({
+        lastAcceptedContent: null,
+        lastAcceptTimestamp: null,
+        canUndo: false,
+      });
+      return;
+    }
+
+    // Restore content before accept
+    set({
+      content: state.lastAcceptedContent,
+      lastAcceptedContent: null,
+      lastAcceptTimestamp: null,
+      canUndo: false,
+    });
+  },
       });
     }
   },
