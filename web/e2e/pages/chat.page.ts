@@ -9,8 +9,8 @@ import { BasePage } from './base.page';
 
 export class ChatPage extends BasePage {
   // Header elements
-  readonly header: Locator;
-  readonly sidebarToggleButton: Locator;
+  readonly topBar: Locator;
+  readonly drawerMenuButton: Locator;
 
   // Panel elements
   readonly sourcesPanel: Locator;
@@ -37,9 +37,9 @@ export class ChatPage extends BasePage {
   constructor(page: Page) {
     super(page);
 
-    // Header (shared across all pages)
-    this.header = page.locator('header').first();
-    this.sidebarToggleButton = this.header.getByRole('button', { name: /toggle sidebar/i });
+    // Header (FloatingTopBar)
+    this.topBar = page.locator('header').first();
+    this.drawerMenuButton = this.topBar.getByRole('button', { name: '' }).first();
 
     // Panels (3-panel layout: Sources | Chat | Studio)
     this.sourcesPanel = page.locator('aside').first();

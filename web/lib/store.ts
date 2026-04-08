@@ -331,56 +331,27 @@ export const useSkillStore = create<SkillState>()((set, get) => ({
 
 // ==================== UI Store ====================
 
-export type NavItem = 'chat' | 'skills' | 'explore' | 'query' | 'record' | 'logs' | 'settings';
 export type ConnectionStatus = 'connected' | 'disconnected' | 'connecting' | 'error';
 
 interface UIState {
-  sidebarCollapsed: boolean;
-  activeNav: NavItem;
   connectionStatus: ConnectionStatus;
   leftPanelCollapsed: boolean;
   rightPanelCollapsed: boolean;
-  drawerOpen: boolean;
 
-  // Sidebar actions
-  toggleSidebar: () => void;
-  setSidebarCollapsed: (collapsed: boolean) => void;
-
-  // Navigation actions
-  setActiveNav: (nav: NavItem) => void;
-
-  // Connection actions
   setConnectionStatus: (status: ConnectionStatus) => void;
 
-  // Panel actions
   toggleLeftPanel: () => void;
   setLeftPanelCollapsed: (collapsed: boolean) => void;
   toggleRightPanel: () => void;
   setRightPanelCollapsed: (collapsed: boolean) => void;
-  setDrawerOpen: (open: boolean) => void;
 }
 
 export const useUIStore = create<UIState>()(
   persist(
     (set) => ({
-      sidebarCollapsed: false,
-      activeNav: 'chat',
       connectionStatus: 'connected',
       leftPanelCollapsed: false,
       rightPanelCollapsed: false,
-      drawerOpen: false,
-
-      toggleSidebar: () => {
-        set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed }));
-      },
-
-      setSidebarCollapsed: (collapsed) => {
-        set({ sidebarCollapsed: collapsed });
-      },
-
-      setActiveNav: (nav) => {
-        set({ activeNav: nav });
-      },
 
       setConnectionStatus: (status) => {
         set({ connectionStatus: status });
@@ -401,13 +372,18 @@ export const useUIStore = create<UIState>()(
       setRightPanelCollapsed: (collapsed) => {
         set({ rightPanelCollapsed: collapsed });
       },
-
-      setDrawerOpen: (open) => {
-        set({ drawerOpen: open });
-      },
     }),
     {
       name: 'ui-storage',
+      merge: (persisted, current) => {
+        const persistedState = persisted as Record<string, unknown>;
+        return {
+          ...current,
+          connectionStatus: (persistedState.connectionStatus as ConnectionStatus) ?? current.connectionStatus,
+          leftPanelCollapsed: (persistedState.leftPanelCollapsed as boolean) ?? current.leftPanelCollapsed,
+          rightPanelCollapsed: (persistedState.rightPanelCollapsed as boolean) ?? current.rightPanelCollapsed,
+        };
+      },
     }
   )
 );

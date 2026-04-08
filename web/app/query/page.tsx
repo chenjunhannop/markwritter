@@ -1,17 +1,8 @@
 'use client';
 
-/**
- * Query Page
- *
- * Main query interface with:
- * - Search input with mode selection
- * - Results list
- * - Q&A chat area for streaming responses
- */
-
 import { useState, useCallback } from 'react';
-import { MainLayout } from '@/components/layout';
-import { SearchInput } from '@/components/query/search-input';
+import { AppShell } from '@/components/apple';
+import { FloatingPanel } from '@/components/apple';
 import { ResultsList } from '@/components/query/results-list';
 import { QueryChatArea } from '@/components/query/query-chat-area';
 import { useHasResults, useHasAnswer } from '@/lib/query-store';
@@ -27,15 +18,14 @@ export default function QueryPage() {
   }, []);
 
   return (
-    <MainLayout title="Query">
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        {/* View Toggle */}
+    <AppShell title="Knowledge Query" statusBadge="Answer Mode">
+      <div className="py-4">
         {(hasResults || hasAnswer) && (
           <div className="flex gap-2 mb-4">
             <button
               onClick={() => setView('search')}
               className={cn(
-                'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
+                'px-4 py-2 rounded-full text-sm font-medium transition-colors',
                 view === 'search'
                   ? 'bg-primary text-primary-foreground'
                   : 'bg-muted text-muted-foreground hover:bg-accent'
@@ -46,7 +36,7 @@ export default function QueryPage() {
             <button
               onClick={() => setView('chat')}
               className={cn(
-                'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
+                'px-4 py-2 rounded-full text-sm font-medium transition-colors',
                 view === 'chat'
                   ? 'bg-primary text-primary-foreground'
                   : 'bg-muted text-muted-foreground hover:bg-accent'
@@ -57,15 +47,14 @@ export default function QueryPage() {
           </div>
         )}
 
-        {/* Content Area */}
-        <div className="bg-background rounded-xl shadow-sm border p-6">
+        <FloatingPanel className="p-6">
           {view === 'search' ? (
             <ResultsList onResultClick={handleResultClick} />
           ) : (
             <QueryChatArea />
           )}
-        </div>
+        </FloatingPanel>
       </div>
-    </MainLayout>
+    </AppShell>
   );
 }

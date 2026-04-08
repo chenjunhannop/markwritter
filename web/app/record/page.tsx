@@ -1,23 +1,17 @@
 'use client';
 
-/**
- * Record Page
- *
- * Main page for creating and editing notes.
- */
-
 import { Suspense } from 'react';
-import { MainLayout } from '@/components/layout';
+import { AppShell } from '@/components/apple';
+import { FloatingPanel } from '@/components/apple';
 import { NoteForm } from '@/components/record/note-form';
 import { QuickRecord } from '@/components/record/quick-record';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileEdit, Zap } from 'lucide-react';
 
 function RecordContent() {
   return (
-    <div className="container mx-auto py-6 flex-1 flex flex-col min-h-0">
-      <Tabs defaultValue="quick" className="flex-1 flex flex-col">
+    <div className="py-4">
+      <Tabs defaultValue="quick" className="w-full">
         <TabsList className="grid w-full max-w-md grid-cols-2 mb-6">
           <TabsTrigger value="quick" className="gap-2">
             <Zap className="h-4 w-4" />
@@ -29,19 +23,19 @@ function RecordContent() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="quick" className="flex-1">
-          <Card className="max-w-2xl mx-auto">
-            <CardHeader>
-              <CardTitle>Quick Record</CardTitle>
-            </CardHeader>
-            <CardContent>
+        <TabsContent value="quick">
+          <FloatingPanel>
+            <div className="p-6">
+              <h3 className="text-lg font-semibold mb-4">Quick Record</h3>
               <QuickRecord redirectAfterSave={false} />
-            </CardContent>
-          </Card>
+            </div>
+          </FloatingPanel>
         </TabsContent>
 
-        <TabsContent value="editor" className="flex-1">
-          <NoteForm />
+        <TabsContent value="editor">
+          <FloatingPanel>
+            <NoteForm />
+          </FloatingPanel>
         </TabsContent>
       </Tabs>
     </div>
@@ -51,9 +45,9 @@ function RecordContent() {
 export default function RecordPage() {
   return (
     <Suspense fallback={<div className="p-4">Loading...</div>}>
-      <MainLayout title="Record">
+      <AppShell title="Capture & Compose" statusBadge="Drafting">
         <RecordContent />
-      </MainLayout>
+      </AppShell>
     </Suspense>
   );
 }

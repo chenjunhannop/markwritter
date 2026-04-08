@@ -21,19 +21,28 @@ import { useChat } from '@/hooks/use-chat';
 import { useChatStore } from '@/lib/store';
 import { ChatSession } from './chat-session';
 import { MessageInput } from './message-input';
+import { FloatingEmptyCard } from '@/components/apple/empty-state';
+import { ActionPill } from '@/components/apple/action-pill';
 
 interface ChatAreaProps {
   className?: string;
 }
 
-function EmptyState() {
+function EmptyState({ onAction }: { onAction?: (action: string) => void }) {
   return (
-    <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-8">
-      <MessageSquare className="h-12 w-12 mb-4 opacity-30" />
-      <h3 className="text-lg font-medium mb-1">Start a conversation</h3>
-      <p className="text-sm text-center max-w-xs">
-        Select a source from the left panel or type a message below.
-      </p>
+    <div className="flex flex-col items-center justify-center h-full p-6">
+      <FloatingEmptyCard
+        icon={MessageSquare}
+        title="Start a conversation"
+        description="Pull in notes from the left, ask naturally, and keep your tools available without the center collapsing into whitespace."
+        actions={
+          <>
+            <ActionPill label="Summarize Source" onClick={() => onAction?.('summarize')} />
+            <ActionPill label="Compare Notes" onClick={() => onAction?.('compare')} />
+            <ActionPill label="Draft Reply" onClick={() => onAction?.('draft')} />
+          </>
+        }
+      />
     </div>
   );
 }
@@ -120,12 +129,12 @@ export function ChatArea({ className }: ChatAreaProps) {
 
   return (
     <div
-      className={cn('flex h-full flex-col bg-background', className)}
+      className={cn('flex h-full flex-col bg-transparent', className)}
       role="main"
       aria-label="Chat"
     >
       {/* Panel Header */}
-      <div className="flex h-[42px] shrink-0 items-center gap-2 border-b px-3">
+      <div className="flex h-[42px] shrink-0 items-center gap-2 border-b border-[var(--panel-border)] px-3">
         <span className="text-[13px] font-semibold">Chat</span>
         {sourceCount > 0 && (
           <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
@@ -156,7 +165,14 @@ export function ChatArea({ className }: ChatAreaProps) {
       {/* Messages Area */}
       <div className="flex-1 overflow-hidden flex flex-col">
         {!hasMessages && !isStreaming ? (
-          <EmptyState />
+          <EmptyState onAction={(action) => {
+            const actionPrompts: Record<string, string> = {
+              summarize: 'Summarize the selected sources',
+              compare: 'Compare the selected notes',
+              draft: 'Draft a reply based on the context',
+            };
+            if (actionPrompts[action]) sendMessage(actionPrompts[action]);
+          }} />
         ) : (
           <ChatSession
             messages={messages}
@@ -178,16 +194,21 @@ export function ChatArea({ className }: ChatAreaProps) {
       </div>
 
       {/* Input Area */}
-      <div className="border-t p-3">
-        <MessageInput
-          onSubmit={sendMessage}
-          onStop={stopStreaming}
-          isStreaming={isStreaming}
-          maxLength={4000}
-          autoFocus
-          selectedSourceCount={sourceCount}
-          onClearSources={clearSources}
-        />
+      <div className="border-t border-[var(--panel-border)] p-3">
+        <div className="flex gap-2 items-end">
+          <div className="flex-1">
+            <MessageInput
+              onSubmit={sendMessage}
+              onStop={stopStreaming}
+              isStreaming={isStreaming}
+              maxLength={4000}
+              autoFocus
+              selectedSourceCount={sourceCount}
+              onClearSources={clearSources}
+              className="border-0 p-0"
+            />
+          </div>
+        </div>
 
         {/* Source Context Indicator */}
         {sourceCount > 0 && (

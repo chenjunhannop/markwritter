@@ -62,7 +62,7 @@ test.describe('Skills Page', () => {
       await expect(header).toBeVisible();
 
       const title = header.locator('h1');
-      await expect(title).toContainText('Skills');
+      await expect(title).toContainText('Skill');
     });
 
     test('should display skills list', async ({ skillsPage }) => {

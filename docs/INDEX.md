@@ -1,6 +1,6 @@
 # Markwritter Documentation Index
 
-> **Last Updated:** 2026-03-23
+> **Last Updated:** 2026-04-07
 
 ---
 
@@ -33,6 +33,8 @@ Located in `docs/plans/` directory:
 | logging-implementation.md | 2026-03-19 | Logging system implementation |
 | logging-system-design.md | 2026-03-19 | Logging system design |
 | gui-implementation.md | 2026-03-21 | GUI implementation notes |
+| [2026-04-07-apple-refresh-foundations.md](plans/2026-04-07-apple-refresh-foundations.md) | 2026-04-07 | Apple-inspired UI foundations for Figma and frontend implementation |
+| [2026-04-07-apple-refresh-screen-alignment.md](plans/2026-04-07-apple-refresh-screen-alignment.md) | 2026-04-07 | Alignment guide for Chat, Query, and Record screens plus shared component inventory |
 
 ## Frontend Documentation
 

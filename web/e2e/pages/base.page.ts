@@ -49,11 +49,10 @@ export class SidebarComponent {
 
   constructor(page: Page) {
     this.page = page;
-    // Navigation buttons use aria-label for accessibility
-    this.navChat = page.getByRole('button', { name: 'Chat' });
-    this.navSkills = page.getByRole('button', { name: 'Skills' });
-    this.navLogs = page.getByRole('button', { name: 'Logs' });
-    this.navSettings = page.getByRole('button', { name: 'Settings' });
+    this.navChat = page.getByRole('link', { name: 'Chat' });
+    this.navSkills = page.getByRole('link', { name: 'Skills' });
+    this.navLogs = page.getByRole('link', { name: 'Logs' });
+    this.navSettings = page.getByRole('link', { name: 'Settings' });
     this.brand = page.locator('nav').getByText('Markwritter');
   }
 

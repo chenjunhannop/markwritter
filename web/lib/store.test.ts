@@ -335,22 +335,14 @@ describe('useSkillStore', () => {
   });
 });
 
-// ==================== Phase 2: NavItem type extension ====================
-
-describe('NavItem type extension (Phase 2)', () => {
-  it('should allow setActiveNav with explore, query, record', () => {
+describe('useUIStore panel persistence', () => {
+  it('should persist panel state', () => {
     const store = useUIStore.getState();
 
-    store.setActiveNav('explore');
-    expect(useUIStore.getState().activeNav).toBe('explore');
+    store.setLeftPanelCollapsed(true);
+    store.setRightPanelCollapsed(true);
 
-    store.setActiveNav('query');
-    expect(useUIStore.getState().activeNav).toBe('query');
-
-    store.setActiveNav('record');
-    expect(useUIStore.getState().activeNav).toBe('record');
-
-    // Reset to default
-    store.setActiveNav('chat');
+    expect(useUIStore.getState().leftPanelCollapsed).toBe(true);
+    expect(useUIStore.getState().rightPanelCollapsed).toBe(true);
   });
 });

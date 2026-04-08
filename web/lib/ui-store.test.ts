@@ -1,7 +1,7 @@
 /**
- * Tests for UI Store - Layout State Management
+ * Tests for UI Store - Panel State Management
  *
- * Tests sidebar state, navigation, and connection status.
+ * Tests panel collapse state and connection status.
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -11,93 +11,10 @@ import { useUIStore } from './store';
 describe('useUIStore', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Reset store state
     useUIStore.setState({
-      sidebarCollapsed: false,
-      activeNav: 'chat',
       connectionStatus: 'connected',
-    });
-  });
-
-  describe('sidebar state', () => {
-    it('should start with sidebar expanded', () => {
-      const state = useUIStore.getState();
-
-      expect(state.sidebarCollapsed).toBe(false);
-    });
-
-    it('should toggle sidebar collapsed state', () => {
-      const store = useUIStore.getState();
-
-      act(() => {
-        store.toggleSidebar();
-      });
-
-      expect(useUIStore.getState().sidebarCollapsed).toBe(true);
-
-      act(() => {
-        useUIStore.getState().toggleSidebar();
-      });
-
-      expect(useUIStore.getState().sidebarCollapsed).toBe(false);
-    });
-
-    it('should set sidebar collapsed state directly', () => {
-      const store = useUIStore.getState();
-
-      act(() => {
-        store.setSidebarCollapsed(true);
-      });
-
-      expect(useUIStore.getState().sidebarCollapsed).toBe(true);
-
-      act(() => {
-        useUIStore.getState().setSidebarCollapsed(false);
-      });
-
-      expect(useUIStore.getState().sidebarCollapsed).toBe(false);
-    });
-  });
-
-  describe('navigation state', () => {
-    it('should start with chat as active nav', () => {
-      const state = useUIStore.getState();
-
-      expect(state.activeNav).toBe('chat');
-    });
-
-    it('should set active navigation item', () => {
-      const store = useUIStore.getState();
-
-      act(() => {
-        store.setActiveNav('skills');
-      });
-
-      expect(useUIStore.getState().activeNav).toBe('skills');
-
-      act(() => {
-        useUIStore.getState().setActiveNav('logs');
-      });
-
-      expect(useUIStore.getState().activeNav).toBe('logs');
-
-      act(() => {
-        useUIStore.getState().setActiveNav('settings');
-      });
-
-      expect(useUIStore.getState().activeNav).toBe('settings');
-    });
-
-    it('should handle invalid nav items gracefully', () => {
-      const store = useUIStore.getState();
-
-      // TypeScript prevents this at compile time, but runtime test
-      act(() => {
-        store.setActiveNav('chat');
-      });
-
-      // Should remain valid
-      expect(useUIStore.getState().activeNav).toBe('chat');
+      leftPanelCollapsed: false,
+      rightPanelCollapsed: false,
     });
   });
 
@@ -131,12 +48,75 @@ describe('useUIStore', () => {
     });
   });
 
+  describe('panel state', () => {
+    it('should start with both panels expanded', () => {
+      const state = useUIStore.getState();
+
+      expect(state.leftPanelCollapsed).toBe(false);
+      expect(state.rightPanelCollapsed).toBe(false);
+    });
+
+    it('should toggle left panel collapsed state', () => {
+      const store = useUIStore.getState();
+
+      act(() => {
+        store.toggleLeftPanel();
+      });
+
+      expect(useUIStore.getState().leftPanelCollapsed).toBe(true);
+
+      act(() => {
+        useUIStore.getState().toggleLeftPanel();
+      });
+
+      expect(useUIStore.getState().leftPanelCollapsed).toBe(false);
+    });
+
+    it('should toggle right panel collapsed state', () => {
+      const store = useUIStore.getState();
+
+      act(() => {
+        store.toggleRightPanel();
+      });
+
+      expect(useUIStore.getState().rightPanelCollapsed).toBe(true);
+
+      act(() => {
+        useUIStore.getState().toggleRightPanel();
+      });
+
+      expect(useUIStore.getState().rightPanelCollapsed).toBe(false);
+    });
+
+    it('should set panel collapsed state directly', () => {
+      act(() => {
+        useUIStore.getState().setLeftPanelCollapsed(true);
+      });
+
+      expect(useUIStore.getState().leftPanelCollapsed).toBe(true);
+
+      act(() => {
+        useUIStore.getState().setRightPanelCollapsed(true);
+      });
+
+      expect(useUIStore.getState().rightPanelCollapsed).toBe(true);
+
+      act(() => {
+        useUIStore.getState().setLeftPanelCollapsed(false);
+        useUIStore.getState().setRightPanelCollapsed(false);
+      });
+
+      expect(useUIStore.getState().leftPanelCollapsed).toBe(false);
+      expect(useUIStore.getState().rightPanelCollapsed).toBe(false);
+    });
+  });
+
   describe('hook usage', () => {
     it('should work with renderHook', () => {
       const { result } = renderHook(() => useUIStore());
 
-      expect(result.current.sidebarCollapsed).toBe(false);
-      expect(result.current.activeNav).toBe('chat');
+      expect(result.current.leftPanelCollapsed).toBe(false);
+      expect(result.current.rightPanelCollapsed).toBe(false);
       expect(result.current.connectionStatus).toBe('connected');
     });
 
@@ -144,10 +124,16 @@ describe('useUIStore', () => {
       const { result } = renderHook(() => useUIStore());
 
       act(() => {
-        result.current.toggleSidebar();
+        result.current.toggleLeftPanel();
       });
 
-      expect(result.current.sidebarCollapsed).toBe(true);
+      expect(result.current.leftPanelCollapsed).toBe(true);
+
+      act(() => {
+        result.current.toggleRightPanel();
+      });
+
+      expect(result.current.rightPanelCollapsed).toBe(true);
     });
   });
 });

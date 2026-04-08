@@ -66,7 +66,7 @@ export function SourcesPanel() {
   return (
     <div className="flex h-full flex-col">
       {/* Panel Header */}
-      <div className="flex h-[42px] shrink-0 items-center justify-between border-b px-3">
+      <div className="flex h-[42px] shrink-0 items-center justify-between border-b border-[var(--panel-border)] px-3">
         <span className="text-[13px] font-semibold">Sources</span>
         <Button variant="ghost" size="icon" onClick={toggleLeftPanel} className="h-7 w-7">
           <ChevronLeft className="h-3.5 w-3.5" />

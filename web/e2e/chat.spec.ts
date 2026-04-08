@@ -136,18 +136,15 @@ test.describe('Chat Page', () => {
       await expect(main).toBeVisible({ timeout: 10000 });
     });
 
-    test('should display header with Chat title', async ({ chatPage }) => {
+    test('should display header with brand name', async ({ chatPage }) => {
       await chatPage.goto();
 
-      // Wait for page to load
       await chatPage.page.waitForLoadState('load');
 
-      // Header should be visible with Chat title
       const header = chatPage.page.locator('header').first();
       await expect(header).toBeVisible({ timeout: 10000 });
 
-      // Header shows Chat page title
-      await expect(header.getByRole('heading', { name: 'Chat' })).toBeVisible();
+      await expect(header.getByText('Markwritter')).toBeVisible();
     });
   });
 });

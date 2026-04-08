@@ -46,7 +46,7 @@ test.describe('Settings Page', () => {
 
       // Check title
       const title = header.locator('h1');
-      await expect(title).toContainText('Settings');
+      await expect(title).toContainText('Preferences');
     });
   });
 

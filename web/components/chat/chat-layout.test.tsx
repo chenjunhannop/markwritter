@@ -1,8 +1,8 @@
 /**
- * Tests for ChatLayout Component - Mobile Responsive Behavior
+ * Tests for ChatLayout Component - Apple Refresh Layout
  *
  * Tests the three-panel layout for responsive behavior:
- * - Panels render inline on wide viewports
+ * - Panels render as FloatingPanels on wide viewports
  * - Panels auto-collapse on narrow viewports (< 900px)
  * - User preferences are preserved when resizing
  * - Panels render as Sheet overlays on mobile when opened
@@ -12,30 +12,45 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ChatLayout } from './chat-layout';
+import { useUIStore } from '@/lib/store';
 
-// Mock child components to isolate ChatLayout logic
 vi.mock('@/components/chat/sources-panel', () => ({
   SourcesPanel: () => <div data-testid="sources-panel">SourcesPanel</div>,
 }));
 
-vi.mock('@/components/chat/answer-context-panel', () => ({
-  AnswerContextPanel: () => <div data-testid="answer-context-panel">AnswerContextPanel</div>,
+vi.mock('@/components/chat/studio-panel', () => ({
+  StudioPanel: () => <div data-testid="studio-panel">StudioPanel</div>,
 }));
 
-// Mock MainLayout to render children directly (we test it wraps correctly)
-vi.mock('@/components/layout/main-layout', () => ({
-  MainLayout: ({ children, title }: { children: React.ReactNode; title: string }) => (
-    <div data-testid="main-layout" data-title={title}>
-      {children}
+vi.mock('@/components/apple/floating-top-bar', () => ({
+  FloatingTopBar: ({ onToggleNav }: { onToggleNav?: () => void; title?: string; statusBadge?: string }) => (
+    <header data-testid="floating-top-bar">
+      {onToggleNav && <button onClick={onToggleNav}>Toggle Nav</button>}
+    </header>
+  ),
+}));
+
+vi.mock('@/components/apple/global-nav', () => ({
+  GlobalNav: ({ open, onClose }: { open: boolean; onClose: () => void }) => (
+    <div data-testid="global-nav" data-open={open}>
+      {open && <button onClick={onClose}>Close Nav</button>}
     </div>
   ),
 }));
 
-// Track matchMedia listeners so we can simulate viewport changes
+vi.mock('@/components/apple/gradient-page', () => ({
+  GradientPage: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+}));
+
+vi.mock('@/components/apple/floating-panel', () => ({
+  FloatingPanel: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <div data-testid="floating-panel" className={className}>{children}</div>
+  ),
+}));
+
 type MediaQueryListener = (event: { matches: boolean; media: string }) => void;
 let mediaQueryListeners: Array<{ query: string; listener: MediaQueryListener }> = [];
 
-// Helper to create a matchMedia mock that supports listener tracking
 function createMatchMediaMock(overrides: Record<string, boolean> = {}) {
   return vi.fn().mockImplementation((query: string) => {
     const matches = overrides[query] ?? false;
@@ -64,8 +79,12 @@ describe('ChatLayout', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mediaQueryListeners = [];
+    useUIStore.setState({
+      leftPanelCollapsed: false,
+      rightPanelCollapsed: false,
+      connectionStatus: 'connected',
+    });
 
-    // Save original and replace with our mock
     originalMatchMedia = window.matchMedia;
     Object.defineProperty(window, 'matchMedia', {
       writable: true,
@@ -74,7 +93,6 @@ describe('ChatLayout', () => {
   });
 
   afterEach(() => {
-    // Restore original matchMedia
     Object.defineProperty(window, 'matchMedia', {
       writable: true,
       value: originalMatchMedia,
@@ -82,19 +100,8 @@ describe('ChatLayout', () => {
     mediaQueryListeners = [];
   });
 
-  // --- Test Case 1: Wide viewport - panels visible as inline aside ---
   describe('wide viewport (>= 900px)', () => {
-    it('should wrap content in MainLayout with title Chat', () => {
-      render(
-        <ChatLayout>
-          <div data-testid="chat-content">Chat Content</div>
-        </ChatLayout>
-      );
-
-      expect(screen.getByTestId('main-layout')).toHaveAttribute('data-title', 'Chat');
-    });
-
-    it('should render left panel as inline aside when not collapsed', () => {
+    it('should render left panel as FloatingPanel when not collapsed', () => {
       render(
         <ChatLayout>
           <div data-testid="chat-content">Chat Content</div>
@@ -104,22 +111,24 @@ describe('ChatLayout', () => {
       const sourcesPanel = screen.getByTestId('sources-panel');
       expect(sourcesPanel).toBeInTheDocument();
 
-      const asideElement = sourcesPanel.closest('aside');
-      expect(asideElement).toBeInTheDocument();
+      const panels = screen.getAllByTestId('floating-panel');
+      const leftPanel = panels.find(p => p.contains(sourcesPanel));
+      expect(leftPanel).toBeDefined();
     });
 
-    it('should render right panel as inline aside when not collapsed', () => {
+    it('should render right panel as FloatingPanel when not collapsed', () => {
       render(
         <ChatLayout>
           <div data-testid="chat-content">Chat Content</div>
         </ChatLayout>
       );
 
-      const answerContextPanel = screen.getByTestId('answer-context-panel');
-      expect(answerContextPanel).toBeInTheDocument();
+      const studioPanel = screen.getByTestId('studio-panel');
+      expect(studioPanel).toBeInTheDocument();
 
-      const asideElement = answerContextPanel.closest('aside');
-      expect(asideElement).toBeInTheDocument();
+      const panels = screen.getAllByTestId('floating-panel');
+      const rightPanel = panels.find(p => p.contains(studioPanel));
+      expect(rightPanel).toBeDefined();
     });
 
     it('should render the center main content area', () => {
@@ -133,6 +142,16 @@ describe('ChatLayout', () => {
       expect(screen.getByText('Chat Content')).toBeInTheDocument();
     });
 
+    it('should render the floating top bar', () => {
+      render(
+        <ChatLayout>
+          <div>Chat</div>
+        </ChatLayout>
+      );
+
+      expect(screen.getByTestId('floating-top-bar')).toBeInTheDocument();
+    });
+
     it('should not render Sheet overlays on wide viewport', () => {
       render(
         <ChatLayout>
@@ -143,9 +162,19 @@ describe('ChatLayout', () => {
       const sheetContents = document.querySelectorAll('[data-slot="sheet-content"]');
       expect(sheetContents.length).toBe(0);
     });
+
+    it('should not show collapsed strip buttons when panels are expanded', () => {
+      render(
+        <ChatLayout>
+          <div>Chat</div>
+        </ChatLayout>
+      );
+
+      expect(screen.queryByRole('button', { name: /expand left panel/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /expand right panel/i })).not.toBeInTheDocument();
+    });
   });
 
-  // --- Test Case 2: Narrow viewport - panels auto-collapse ---
   describe('narrow viewport (< 900px)', () => {
     beforeEach(() => {
       Object.defineProperty(window, 'matchMedia', {
@@ -161,9 +190,8 @@ describe('ChatLayout', () => {
         </ChatLayout>
       );
 
-      // On narrow viewport, aside elements should not be rendered
-      const asides = document.querySelectorAll('aside');
-      expect(asides.length).toBe(0);
+      expect(screen.queryByTestId('sources-panel')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('studio-panel')).not.toBeInTheDocument();
     });
 
     it('should show collapsed strip buttons when panels are collapsed on narrow viewport', () => {
@@ -173,8 +201,8 @@ describe('ChatLayout', () => {
         </ChatLayout>
       );
 
-      const expandLeftButton = screen.getByRole('button', { name: /expand left panel/i });
-      expect(expandLeftButton).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /expand left panel/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /expand right panel/i })).toBeInTheDocument();
     });
 
     it('should not render Sheet overlays when both panels are collapsed', () => {
@@ -189,7 +217,6 @@ describe('ChatLayout', () => {
     });
   });
 
-  // --- Test Case 3: Viewport resize - restore user preferences ---
   describe('viewport resize behavior', () => {
     it('should auto-collapse panels when viewport narrows', async () => {
       render(
@@ -198,8 +225,8 @@ describe('ChatLayout', () => {
         </ChatLayout>
       );
 
-      const asidesBefore = document.querySelectorAll('aside');
-      expect(asidesBefore.length).toBeGreaterThan(0);
+      expect(screen.getByTestId('sources-panel')).toBeInTheDocument();
+      expect(screen.getByTestId('studio-panel')).toBeInTheDocument();
 
       await act(async () => {
         mediaQueryListeners.forEach((entry) => {
@@ -209,8 +236,8 @@ describe('ChatLayout', () => {
         });
       });
 
-      const asidesAfter = document.querySelectorAll('aside');
-      expect(asidesAfter.length).toBe(0);
+      expect(screen.queryByTestId('sources-panel')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('studio-panel')).not.toBeInTheDocument();
 
       expect(screen.getByRole('button', { name: /expand left panel/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /expand right panel/i })).toBeInTheDocument();
@@ -251,7 +278,6 @@ describe('ChatLayout', () => {
     });
   });
 
-  // --- Test Case 4: Mobile - panels open as Sheet overlays ---
   describe('mobile Sheet overlay behavior', () => {
     beforeEach(() => {
       Object.defineProperty(window, 'matchMedia', {
@@ -292,7 +318,7 @@ describe('ChatLayout', () => {
       const sheetContents = document.querySelectorAll('[data-slot="sheet-content"]');
       expect(sheetContents.length).toBeGreaterThan(0);
 
-      expect(screen.getByTestId('answer-context-panel')).toBeInTheDocument();
+      expect(screen.getByTestId('studio-panel')).toBeInTheDocument();
     });
 
     it('should close Sheet and return to collapsed state on close', async () => {
@@ -355,7 +381,6 @@ describe('ChatLayout', () => {
     });
   });
 
-  // --- Edge cases ---
   describe('edge cases', () => {
     it('should render with null children without crashing', () => {
       expect(() => {
@@ -395,8 +420,21 @@ describe('ChatLayout', () => {
         }
       });
 
-      // Should still render MainLayout
-      expect(screen.getByTestId('main-layout')).toBeInTheDocument();
+      expect(screen.getByTestId('floating-top-bar')).toBeInTheDocument();
+    });
+
+    it('should handle GlobalNav toggle', async () => {
+      const user = userEvent.setup();
+      render(
+        <ChatLayout>
+          <div>Chat</div>
+        </ChatLayout>
+      );
+
+      const toggleButton = screen.getByRole('button', { name: /toggle nav/i });
+      await user.click(toggleButton);
+
+      expect(screen.getByTestId('global-nav')).toBeInTheDocument();
     });
   });
 });
