@@ -194,10 +194,16 @@ ruff check markwritter/ tests/
 
 ## Documentation
 
+### Product & Design
 - [Transformation Plan](note/note-app-transformation-plan.md) - Full product roadmap
 - [Framework Design](note/framework-design.md) - Architecture details
 - [GUI Implementation](note/gui-implementation-plan.md) - Frontend design
 - [LiteLLM Integration](note/litellm-integration-plan.md) - LLM configuration
+
+### Figma Design System
+- [Figma Design Specification](docs/figma-design-spec.md) - Complete design system specs
+- [Figma Wireframes](docs/figma-wireframes.md) - Page layouts and component structures
+- [Figma Implementation Guide](docs/figma-implementation-guide.md) - Step-by-step guide
 
 ## License
 

@@ -152,6 +152,8 @@ class LLMService:
         model: Optional[str] = None,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
+        api_base: Optional[str] = None,
+        api_key: Optional[str] = None,
     ) -> AsyncGenerator[str, None]:
         """Stream a chat completion request."""
         if messages is None:
@@ -164,6 +166,10 @@ class LLMService:
             kwargs["temperature"] = temperature
         if max_tokens is not None:
             kwargs["max_tokens"] = max_tokens
+        if api_base is not None:
+            kwargs["api_base"] = api_base
+        if api_key is not None:
+            kwargs["api_key"] = api_key
 
         async for token in self._llm_client.stream_complete(messages=messages, **kwargs):
             yield token

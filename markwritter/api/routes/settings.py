@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 
 from fastapi import APIRouter
 from pydantic import BaseModel, field_validator
@@ -27,10 +27,13 @@ _settings_cache: dict = {
     "theme": "system",
     "language": "en",
     "vault_path": "",
+    "api_url": "",
+    "llm_model": "gpt-4",
+    "api_key": "",
 }
 
 # Fields that are allowed in the public response
-_PUBLIC_FIELDS = {"theme", "language", "vault_path"}
+_PUBLIC_FIELDS = {"theme", "language", "vault_path", "api_url", "llm_model", "api_key"}
 
 # Allowed theme values
 _VALID_THEMES = ("light", "dark", "system")
@@ -40,6 +43,9 @@ _DEFAULTS = {
     "theme": "system",
     "language": "en",
     "vault_path": "",
+    "api_url": "",
+    "llm_model": "gpt-4",
+    "api_key": "",
 }
 
 
@@ -105,8 +111,39 @@ def _get_public_settings() -> dict:
 
     Returns:
         Dict with only the whitelisted public fields.
+        api_key is never returned in plaintext; api_key_set indicates presence.
     """
-    return {k: _settings_cache.get(k, _DEFAULTS[k]) for k in _PUBLIC_FIELDS}
+    result = {}
+    for k in _PUBLIC_FIELDS:
+        if k == "api_key":
+            continue
+        result[k] = _settings_cache.get(k, _DEFAULTS.get(k, ""))
+    result["api_key_set"] = bool(_settings_cache.get("api_key", ""))
+    return result
+
+
+def get_vault_path() -> Optional[str]:
+    """Return the current vault_path from settings.
+
+    Returns:
+        Vault path string or None if not configured.
+    """
+    path = _settings_cache.get("vault_path", "")
+    return path if path else None
+
+
+# Callback list for vault_path change notifications
+_vault_change_callbacks: list[Callable[[str | None], None]] = []
+
+
+def register_vault_change_callback(callback: Callable[[str | None], None]) -> None:
+    """Register a callback to be called when vault_path changes.
+
+    Args:
+        callback: Callable that takes the new vault_path (str or None) as argument.
+    """
+    if callback not in _vault_change_callbacks:
+        _vault_change_callbacks.append(callback)
 
 
 # ==============================================================================
@@ -120,6 +157,9 @@ class SettingsResponse(BaseModel):
     theme: str = "system"
     language: str = "en"
     vault_path: str = ""
+    api_url: str = ""
+    llm_model: str = "gpt-4"
+    api_key_set: bool = False
 
 
 class SettingsUpdateRequest(BaseModel):
@@ -131,6 +171,9 @@ class SettingsUpdateRequest(BaseModel):
     theme: Optional[str] = None
     language: Optional[str] = None
     vault_path: Optional[str] = None
+    api_url: Optional[str] = None
+    llm_model: Optional[str] = None
+    api_key: Optional[str] = None
 
     @field_validator("theme")
     @classmethod
@@ -182,6 +225,20 @@ async def get_settings() -> SettingsResponse:
     return SettingsResponse(**public)
 
 
+def _get_api_key() -> Optional[str]:
+    """Return the stored API key (for backend use only)."""
+    return _settings_cache.get("api_key") or None
+
+
+def get_llm_settings() -> dict[str, str]:
+    """Return the stored LLM settings for backend request construction."""
+    return {
+        "api_url": (_settings_cache.get("api_url") or "").strip(),
+        "llm_model": (_settings_cache.get("llm_model") or _DEFAULTS["llm_model"]).strip(),
+        "api_key": (_settings_cache.get("api_key") or "").strip(),
+    }
+
+
 @router.put(
     "/",
     response_model=SettingsResponse,
@@ -205,6 +262,15 @@ async def update_settings(request: SettingsUpdateRequest) -> SettingsResponse:
     if update_data:
         _settings_cache.update(update_data)
         _save_settings()
+
+        # Notify listeners if vault_path changed
+        if "vault_path" in update_data:
+            new_vault = update_data["vault_path"] or None
+            for cb in _vault_change_callbacks:
+                try:
+                    cb(new_vault)
+                except Exception as exc:
+                    logger.warning("Vault change callback error: %s", exc)
 
     public = _get_public_settings()
     return SettingsResponse(**public)

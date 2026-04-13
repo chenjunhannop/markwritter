@@ -15,6 +15,8 @@ from markwritter.agent.chat_graph import (
     normalize_conversation_history,
     retrieve_chat_context,
 )
+from markwritter.agent.agent_loop import AgentLoop
+from markwritter.agent.tool_executor import ToolExecutor
 from markwritter.api.models.chat import (
     ChatEvent,
     ChatRequest,
@@ -231,6 +233,8 @@ async def chat(request: ChatRequest):
             if request.sources is not None:
                 await chat_db.save_session(session_id, request.sources)
 
+            # Try agent loop first, fall back to RAG-based flow
+            # Retrieve context for selected sources if available
             graph_state = await retrieve_chat_context(
                 rag_tool=rag_tool,
                 chat_db=chat_db,
@@ -239,6 +243,10 @@ async def chat(request: ChatRequest):
                 selected_source_paths=effective_sources,
                 conversation_history=conversation_history,
             )
+            if graph_state.get("error"):
+                event = ChatEvent(type="error", content=graph_state["error"])
+                yield f"data: {event.model_dump_json()}\n\n"
+                return
 
             if graph_state.get("error"):
                 event = ChatEvent(type="error", content=graph_state["error"])
@@ -251,10 +259,76 @@ async def chat(request: ChatRequest):
                 history=conversation_history,
             )
             citations = build_citations(graph_state.get("retrieved_chunks", []))
+            llm_settings = settings_routes.get_llm_settings()
 
-            response_parts: list[str] = []
-            async for token in llm_service.stream_complete(messages):
-                response_parts.append(token)
+            api_url = llm_settings.get("api_url") or ""
+            api_key = llm_settings.get("api_key") or ""
+
+            # Check if vault is available for agent loop
+ vault_path = settings_routes._data_dir
+            use_agent_loop = vault_path is not None and api_url and api_key
+ vault_path and settings_routes._get_vault()
+
+
+            if use_agent_loop:
+ vault_path is not None:
+                # Use agent loop with tool use
+                try:
+                    from markwritter.obsidian.vault import ObsidianVault as OVault
+                from markwritter.agent.tool_executor import ToolExecutor as OToolExec
+                from markwritter.agent.agent_loop import AgentLoop as OAgentLoop
+
+                    from markwritter.llm_client import LLMClient as OLLMClient
+
+                    vault = ObsidianVault(vault_path)
+                    tool_executor = ToolExecutor(vault)
+                    agent = AgentLoop(tool_executor)
+                    llm_client = LLMClient()
+
+                    llm_model_raw = llm_settings["llm_model"] or None
+
+                    api_base_raw = api_url
+                    api_key_raw = api_key
+
+                    async for event in agent.run(
+                        messages=messages,
+                        llm_client=llm_client,
+                        model=llm_model,
+                        api_base=api_base,
+                        api_key=api_key,
+                    ):
+                        if event["type"] == "text_delta":
+                            response_parts.append(event["content"])
+                            ev = ChatEvent(type="text_delta", content=event["content"])
+                            elif event["type"] == "tool_start":
+                            ev_data = {
+                                "type": "tool_start",
+                                "tool_name": event.get("tool_name", ""),
+                                "tool_input": event.get("tool_input", {}),
+                            }
+                            elif event["type"] == "tool_result":
+                            ev_data = {
+                                "type": "tool_result",
+                                "tool_name": event.get("tool_name", ""),
+                                "content": event.get("tool_output", ""),
+                            }
+                            elif event["type"] == "tool_end":
+                            ev_data = {"type": "tool_end"})
+                            elif event["type"] == "error":
+                                ev = ChatEvent(type="error", content=event.get("content", str(event)))
+                            elif event["type"] == "done":
+                                break
+                else:
+            else:
+                # Fallback: simple RAG-based streaming
+                response_parts: list[str] = []
+                async for token in llm_service.stream_complete(
+                    messages,
+                    model=llm_settings["llm_model"] or None,
+                    api_base=llm_settings["api_url"] or None,
+                    api_key=llm_settings["api_key"] or None,
+                ):
+                    response_parts.append(token)
                 event = ChatEvent(type="text_delta", content=token)
                 yield f"data: {event.model_dump_json()}\n\n"
 

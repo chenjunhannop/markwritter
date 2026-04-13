@@ -409,7 +409,14 @@ class TestSettingsEdgeCases:
         """GET response is a valid JSON object with exactly the expected keys."""
         response = client.get("/api/v1/settings")
         data = response.json()
-        expected_keys = {"theme", "language", "vault_path"}
+        expected_keys = {
+            "theme",
+            "language",
+            "vault_path",
+            "api_url",
+            "llm_model",
+            "api_key_set",
+        }
         assert set(data.keys()) == expected_keys
 
     def test_multiple_sequential_updates(self, client):

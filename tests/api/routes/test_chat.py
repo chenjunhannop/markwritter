@@ -262,7 +262,7 @@ class TestChatEndpoint:
             def __init__(self) -> None:
                 self.messages: list[dict[str, str]] | None = None
 
-            async def stream_complete(self, messages):
+            async def stream_complete(self, messages, **kwargs):
                 self.messages = messages
                 for token in ["Hello", " world"]:
                     yield token
@@ -332,7 +332,7 @@ class TestChatEndpoint:
                 return SimpleNamespace(chunks=[])
 
         class FakeLLMService:
-            async def stream_complete(self, messages):
+            async def stream_complete(self, messages, **kwargs):
                 yield "Done"
 
         fake_rag_tool = FakeRAGTool()
@@ -354,6 +354,71 @@ class TestChatEndpoint:
 
         assert response.status_code == 200
         assert fake_rag_tool.source_paths == ["notes/persisted.md"]
+
+    def test_chat_passes_saved_llm_settings_to_stream_complete(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test chat forwards saved model, base URL, and API key to the LLM layer."""
+
+        class FakeChatDB:
+            async def get_sources(self, session_id: str) -> list[str]:
+                return []
+
+            async def get_conversation_history(self, session_id: str) -> list[dict]:
+                return []
+
+            async def save_session(self, session_id: str, sources: list[str]) -> None:
+                return None
+
+            async def save_message(
+                self, session_id: str, message_index: int, role: str, content: str
+            ) -> None:
+                return None
+
+        class FakeRAGTool:
+            async def search(self, query: str, source_paths=None, limit: int = 5):
+                return SimpleNamespace(chunks=[])
+
+        class FakeLLMService:
+            def __init__(self) -> None:
+                self.call_kwargs: dict | None = None
+
+            async def stream_complete(self, messages, **kwargs):
+                self.call_kwargs = kwargs
+                yield "Configured"
+
+        fake_llm = FakeLLMService()
+
+        async def fake_get_chat_db():
+            return FakeChatDB()
+
+        async def fake_get_rag_tool():
+            return FakeRAGTool()
+
+        monkeypatch.setattr(chat_routes, "get_chat_db", fake_get_chat_db)
+        monkeypatch.setattr(chat_routes, "get_rag_tool", fake_get_rag_tool)
+        monkeypatch.setattr(chat_routes, "get_llm_service", lambda: fake_llm)
+        monkeypatch.setattr(
+            chat_routes.settings_routes,
+            "get_llm_settings",
+            lambda: {
+                "api_url": "http://127.0.0.1:8765/v1",
+                "llm_model": "openai/gpt-4o-mini",
+                "api_key": "sk-test-chat",
+            },
+        )
+
+        response = client.post(
+            "/api/v1/chat",
+            json={"message": "Question", "session_id": "session-3"},
+        )
+
+        assert response.status_code == 200
+        assert fake_llm.call_kwargs == {
+            "model": "openai/gpt-4o-mini",
+            "api_base": "http://127.0.0.1:8765/v1",
+            "api_key": "sk-test-chat",
+        }
 
 
 class TestSSEStreamParsing:

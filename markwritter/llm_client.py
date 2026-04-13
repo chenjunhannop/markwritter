@@ -1,10 +1,13 @@
 """LiteLLM client with caching, provider registry support, and fallback mechanism."""
 
 import hashlib
+import json
 import time
 from collections import OrderedDict
 from dataclasses import dataclass
 from typing import Any, AsyncGenerator, Optional, Protocol
+
+import aiohttp
 
 from markwritter.config import get_config
 from markwritter.models import LLMConfig
@@ -143,6 +146,8 @@ class ProviderRegistry(Protocol):
 class LLMClient:
     """LiteLLM client with caching, retry logic, and provider registry support."""
 
+    _ANTHROPIC_DEFAULT_MAX_TOKENS = 4096
+
     def __init__(
         self,
         config: Optional[LLMConfig] = None,
@@ -254,6 +259,171 @@ class LLMClient:
                     models_to_try.append(resolved_fb)
 
         return models_to_try
+
+    @staticmethod
+    def _is_anthropic_compatible_base(api_base: Optional[str]) -> bool:
+        """Return True when the configured base URL targets an Anthropic-style API."""
+        return bool(api_base and "anthropic" in api_base.lower())
+
+    @staticmethod
+    def _should_bypass_litellm_for_anthropic(
+        api_base: Optional[str],
+        api_key: Optional[str],
+    ) -> bool:
+        """Detect Anthropic-compatible providers that require bearer auth, not x-api-key."""
+        if not api_base or not api_key:
+            return False
+
+        normalized_base = api_base.lower()
+        return "bigmodel.cn" in normalized_base or api_key.startswith("sk-sp-")
+
+    @staticmethod
+    def _strip_provider_prefix(model: str) -> str:
+        """Return the raw provider model name without the LiteLLM prefix."""
+        return model.split("/", 1)[1] if "/" in model else model
+
+    @staticmethod
+    def build_anthropic_request_url(api_base: str) -> str:
+        """Build the Anthropic Messages API URL from a configured base URL."""
+        return f"{api_base.rstrip('/')}/v1/messages"
+
+    @staticmethod
+    def _extract_text_content(content: Any) -> str:
+        """Best-effort conversion of message content to plain text for Anthropic payloads."""
+        if isinstance(content, str):
+            return content
+
+        if isinstance(content, list):
+            parts: list[str] = []
+            for item in content:
+                if isinstance(item, dict) and item.get("type") == "text":
+                    text = item.get("text")
+                    if isinstance(text, str):
+                        parts.append(text)
+            return "\n".join(parts)
+
+        if content is None:
+            return ""
+
+        return str(content)
+
+    def build_anthropic_payload(
+        self,
+        messages: list[dict[str, Any]],
+        model: str,
+        temperature: float,
+        max_tokens: Optional[int] = None,
+    ) -> dict[str, Any]:
+        """Convert OpenAI-style chat messages into an Anthropic Messages API payload."""
+        system_parts: list[str] = []
+        anthropic_messages: list[dict[str, Any]] = []
+
+        for message in messages:
+            role = message.get("role", "user")
+            content = self._extract_text_content(message.get("content"))
+
+            if role == "system":
+                if content:
+                    system_parts.append(content)
+                continue
+
+            anthropic_messages.append(
+                {
+                    "role": role if role in {"user", "assistant"} else "user",
+                    "content": content,
+                }
+            )
+
+        payload: dict[str, Any] = {
+            "model": self._strip_provider_prefix(model),
+            "messages": anthropic_messages,
+            "max_tokens": max_tokens or self._ANTHROPIC_DEFAULT_MAX_TOKENS,
+            "stream": True,
+            "temperature": temperature,
+        }
+        if system_parts:
+            payload["system"] = "\n\n".join(system_parts)
+
+        return payload
+
+    @staticmethod
+    def build_anthropic_bearer_headers(api_key: str) -> dict[str, str]:
+        """Build bearer-auth headers for Anthropic-compatible providers."""
+        return {
+            "accept": "text/event-stream",
+            "anthropic-version": "2023-06-01",
+            "authorization": f"Bearer {api_key}",
+            "content-type": "application/json",
+        }
+
+    async def _stream_anthropic_messages(
+        self,
+        messages: list[dict[str, str]],
+        model: str,
+        temperature: float,
+        max_tokens: Optional[int],
+        api_base: str,
+        api_key: str,
+    ) -> AsyncGenerator[str, None]:
+        """Stream tokens from an Anthropic-compatible Messages API using bearer auth."""
+        payload = self.build_anthropic_payload(
+            messages=messages,
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
+        headers = self.build_anthropic_bearer_headers(api_key)
+        url = self.build_anthropic_request_url(api_base)
+
+        timeout = aiohttp.ClientTimeout(total=self.config.timeout)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.post(url, json=payload, headers=headers) as response:
+                if response.status >= 400:
+                    error_body = await response.text()
+                    raise LLMError(
+                        "Anthropic-compatible API request failed "
+                        f"({response.status}): {error_body[:500]}"
+                    )
+
+                event_name: Optional[str] = None
+                data_lines: list[str] = []
+
+                async for raw_line in response.content:
+                    line = raw_line.decode("utf-8").strip()
+
+                    if not line:
+                        if data_lines:
+                            data = "\n".join(data_lines)
+                            if data == "[DONE]":
+                                return
+
+                            try:
+                                payload_event = json.loads(data)
+                            except json.JSONDecodeError:
+                                payload_event = {}
+
+                            event_type = event_name or payload_event.get("type")
+                            if event_type == "content_block_delta":
+                                delta = payload_event.get("delta", {})
+                                if delta.get("type") == "text_delta":
+                                    text = delta.get("text")
+                                    if isinstance(text, str) and text:
+                                        yield text
+                            elif event_type == "error":
+                                error = payload_event.get("error", {})
+                                message = error.get("message") or payload_event.get("message")
+                                raise LLMError(
+                                    f"Anthropic-compatible streaming API error: {message}"
+                                )
+
+                        event_name = None
+                        data_lines = []
+                        continue
+
+                    if line.startswith("event:"):
+                        event_name = line[6:].strip()
+                    elif line.startswith("data:"):
+                        data_lines.append(line[5:].strip())
 
     def complete(
         self,
@@ -488,12 +658,39 @@ class LLMClient:
         model: Optional[str] = None,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
+        api_base: Optional[str] = None,
+        api_key: Optional[str] = None,
     ) -> AsyncGenerator[str, None]:
         """Stream chat completion tokens from the LLM."""
         import litellm
 
         model = model or self.config.default_model
         temperature = temperature if temperature is not None else self.config.temperature
+
+        # When api_base is set and model has no litellm provider prefix,
+        # auto-detect provider from api_base URL:
+        #   - URL contains "anthropic" → anthropic/ prefix (Messages API format)
+        #   - Otherwise → openai/ prefix (Chat Completions API format)
+        if api_base and "/" not in model:
+            if "anthropic" in api_base.lower():
+                model = f"anthropic/{model}"
+            else:
+                model = f"openai/{model}"
+
+        if self._is_anthropic_compatible_base(api_base) and self._should_bypass_litellm_for_anthropic(
+            api_base=api_base,
+            api_key=api_key,
+        ):
+            async for token in self._stream_anthropic_messages(
+                messages=messages,
+                model=model,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                api_base=api_base,
+                api_key=api_key,
+            ):
+                yield token
+            return
 
         kwargs: dict[str, Any] = {
             "model": model,
@@ -504,6 +701,10 @@ class LLMClient:
         }
         if max_tokens:
             kwargs["max_tokens"] = max_tokens
+        if api_base:
+            kwargs["api_base"] = api_base
+        if api_key:
+            kwargs["api_key"] = api_key
 
         response = await litellm.acompletion(**kwargs)
 

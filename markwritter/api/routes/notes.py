@@ -6,14 +6,20 @@ Phase 2.1: RESTful endpoints with real vault integration.
 - POST /notes - Create a new note (returns 201)
 - PUT /notes/{note_path} - Update an existing note
 - GET /notes - List notes
+- GET /notes/tree - Get vault file tree structure
 - GET /notes/{note_path} - Get a specific note
 - DELETE /notes/{note_path} - Delete a note
 """
 
+import logging
+import os
+from pathlib import Path
 from typing import Any, Optional
 
 from fastapi import APIRouter, HTTPException, Query, Response, status
 from pydantic import BaseModel, Field
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -29,6 +35,29 @@ def init_notes_routes(vault: Optional[Any] = None) -> None:
     """
     global _vault
     _vault = vault
+
+
+def set_vault_path(vault_path: Optional[str]) -> None:
+    """Set or clear the vault by path string.
+
+    Creates an ObsidianVault instance if path is valid, or clears _vault.
+
+    Args:
+        vault_path: Absolute path to vault directory, or None to clear.
+    """
+    global _vault
+    if not vault_path:
+        _vault = None
+        return
+
+    try:
+        from markwritter.obsidian.vault import ObsidianVault
+
+        _vault = ObsidianVault(vault_path)
+        logger.info("Notes vault initialized: %s", vault_path)
+    except Exception as exc:
+        logger.warning("Failed to initialize vault at %s: %s", vault_path, exc)
+        _vault = None
 
 
 # ==============================================================================
@@ -167,6 +196,22 @@ class NoteUpdateResponse(BaseModel):
     message: Optional[str] = None
 
 
+class TreeNodeModel(BaseModel):
+    """A node in the vault file tree."""
+
+    name: str
+    path: str
+    type: str = Field(..., description="'file' or 'directory'")
+    file_count: Optional[int] = None
+    children: Optional[list["TreeNodeModel"]] = None
+
+
+class FileTreeResponse(BaseModel):
+    """Response model for file tree."""
+
+    tree: list[TreeNodeModel]
+
+
 # ==============================================================================
 # Endpoints
 # ==============================================================================
@@ -214,6 +259,85 @@ async def list_notes(
     except Exception:
         # Return empty list on error
         return NoteListResponse(notes=[], total=0)
+
+
+_IGNORED_DIRS = {
+    "node_modules", "venv", ".venv", "__pycache__", ".git",
+    ".tox", ".mypy_cache", ".pytest_cache", ".ruff_cache",
+    "dist", "build", ".next", ".nuxt", "coverage",
+}
+
+
+def _build_tree(directory: Path, prefix: str = "") -> tuple[list[TreeNodeModel], int]:
+    """Recursively build a tree from a directory.
+
+    Returns both the tree nodes and the total .md file count (recursive)
+    for this directory level.
+    """
+    nodes: list[TreeNodeModel] = []
+    total_md = 0
+    try:
+        items = sorted(directory.iterdir(), key=lambda p: (not p.is_dir(), p.name.lower()))
+    except PermissionError:
+        return nodes, total_md
+
+    for item in items:
+        # Skip hidden files/directories
+        if item.name.startswith("."):
+            continue
+
+        # Skip common non-vault directories
+        if item.name in _IGNORED_DIRS:
+            continue
+
+        rel_path = f"{prefix}/{item.name}" if prefix else str(item.name)
+
+        if item.is_dir():
+            children, child_count = _build_tree(item, rel_path)
+            total_md += child_count
+            nodes.append(
+                TreeNodeModel(
+                    name=item.name,
+                    path=rel_path,
+                    type="directory",
+                    file_count=child_count,
+                    children=children if children else None,
+                )
+            )
+        elif item.suffix.lower() == ".md":
+            total_md += 1
+            nodes.append(
+                TreeNodeModel(
+                    name=item.name,
+                    path=rel_path,
+                    type="file",
+                )
+            )
+
+    return nodes, total_md
+
+
+@router.get(
+    "/notes/tree",
+    response_model=FileTreeResponse,
+    summary="Get vault file tree",
+    description="Get the nested directory tree of the vault",
+)
+async def get_file_tree() -> FileTreeResponse:
+    """Get the vault file tree structure.
+
+    Returns:
+        FileTreeResponse with nested TreeNode array.
+    """
+    if not _vault:
+        return FileTreeResponse(tree=[])
+
+    try:
+        tree, _ = _build_tree(_vault.path)
+        return FileTreeResponse(tree=tree)
+    except Exception as exc:
+        logger.error("Failed to build file tree: %s", exc)
+        return FileTreeResponse(tree=[])
 
 
 @router.get(

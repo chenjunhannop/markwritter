@@ -1,0 +1,16 @@
+npm error code ENOENT
+npm error code ENOENT
+npm error syscall open
+npm error syscall open
+npm error path /Users/chenjunhan/dev/github-project/markwritter/package.json
+npm error path /Users/chenjunhan/dev/github-project/markwritter/package.json
+npm error errno -2
+npm error errno -2
+npm error enoent Could not read package.json: Error: ENOENT: no such file or directory, open '/Users/chenjunhan/dev/github-project/markwritter/package.json'
+npm error enoent Could not read package.json: Error: ENOENT: no such file or directory, open '/Users/chenjunhan/dev/github-project/markwritter/package.json'
+npm error enoent This is related to npm not being able to find a file.
+npm error enoent
+npm error enoent This is related to npm not being able to find a file.
+npm error enoent
+npm error A complete log of this run can be found in: /Users/chenjunhan/.npm/_logs/2026-04-05T05_09_00_449Z-debug-0.log
+npm error A complete log of this run can be found in: /Users/chenjunhan/.npm/_logs/2026-04-05T05_09_00_449Z-debug-0.log

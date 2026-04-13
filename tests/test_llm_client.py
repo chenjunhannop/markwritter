@@ -2,7 +2,7 @@
 
 import time
 from dataclasses import dataclass
-from typing import Optional
+from typing import AsyncGenerator, Optional
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -813,3 +813,100 @@ class TestEdgeCases:
         # Should still include the invalid models (API will fail later)
         assert "invalid-model" in models
         assert "also-invalid" in models
+
+
+class TestAnthropicCompatibleAuth:
+    """Tests for Anthropic-compatible bearer auth routing."""
+
+    def test_build_anthropic_bearer_headers(self, client_with_registry: LLMClient) -> None:
+        """BigModel-style Anthropic endpoints should use Authorization bearer auth."""
+        headers = client_with_registry._build_anthropic_bearer_headers("sk-sp-test-token")
+
+        assert headers == {
+            "accept": "text/event-stream",
+            "anthropic-version": "2023-06-01",
+            "authorization": "Bearer sk-sp-test-token",
+            "content-type": "application/json",
+        }
+
+    def test_build_anthropic_payload(self, client_with_registry: LLMClient) -> None:
+        """System messages should be split out for the Anthropic Messages API."""
+        payload = client_with_registry._build_anthropic_payload(
+            messages=[
+                {"role": "system", "content": "You are helpful."},
+                {"role": "user", "content": "Hello"},
+            ],
+            model="anthropic/glm-5.1",
+            temperature=0.2,
+            max_tokens=None,
+        )
+
+        assert payload == {
+            "model": "glm-5.1",
+            "messages": [{"role": "user", "content": "Hello"}],
+            "max_tokens": 4096,
+            "stream": True,
+            "temperature": 0.2,
+            "system": "You are helpful.",
+        }
+
+    @pytest.mark.asyncio
+    async def test_stream_complete_bypasses_litellm_for_bigmodel_anthropic_base(
+        self,
+        client_with_registry: LLMClient,
+    ) -> None:
+        """ZhiPu Anthropic-compatible bases should stream via direct bearer-auth HTTP."""
+
+        async def fake_stream(**kwargs) -> AsyncGenerator[str, None]:
+            assert kwargs["api_base"] == "https://open.bigmodel.cn/api/anthropic"
+            assert kwargs["api_key"] == "sk-sp-test-token"
+            yield "Hello"
+            yield " world"
+
+        with patch.object(
+            client_with_registry,
+            "_stream_anthropic_messages",
+            side_effect=fake_stream,
+        ) as mock_stream:
+            tokens = []
+            async for token in client_with_registry.stream_complete(
+                messages=[{"role": "user", "content": "Hi"}],
+                model="glm-5.1",
+                api_base="https://open.bigmodel.cn/api/anthropic",
+                api_key="sk-sp-test-token",
+            ):
+                tokens.append(token)
+
+        assert tokens == ["Hello", " world"]
+        mock_stream.assert_called_once()
+
+    @pytest.mark.asyncio
+    @patch("litellm.acompletion")
+    async def test_stream_complete_keeps_litellm_for_non_bigmodel_anthropic_base(
+        self,
+        mock_acompletion: MagicMock,
+        client_with_registry: LLMClient,
+    ) -> None:
+        """Standard Anthropic bases should continue using LiteLLM unchanged."""
+
+        class FakeChunk:
+            def __init__(self, content: str) -> None:
+                self.choices = [MagicMock(delta=MagicMock(content=content))]
+
+        async def fake_response():
+            for token in ["A", "B"]:
+                yield FakeChunk(token)
+
+        mock_acompletion.return_value = fake_response()
+
+        tokens = []
+        async for token in client_with_registry.stream_complete(
+            messages=[{"role": "user", "content": "Hi"}],
+            model="claude-3-sonnet",
+            api_base="https://api.anthropic.com",
+            api_key="sk-ant-api-test",
+        ):
+            tokens.append(token)
+
+        assert tokens == ["A", "B"]
+        mock_acompletion.assert_called_once()

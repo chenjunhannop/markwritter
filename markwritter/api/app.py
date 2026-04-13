@@ -272,13 +272,37 @@ def _register_routes(app: FastAPI, vault_path: Optional[str] = None) -> None:
     # Register additional routers
     from markwritter.api.routes import chat, content, explore, logs, notes, query, record, search, settings, skills
 
-    # Configure explore routes with vault path
+    # Initialize settings persistence.
+    # Always load saved settings so vault_path survives restarts.
+    # CLI vault_path takes precedence, but we still need the settings dir.
+    import os as _os
     if vault_path:
-        explore.set_vault_path(vault_path)
+        data_dir = vault_path
+    else:
+        data_dir = _os.path.expanduser("~/.markwritter")
+    settings.init_settings(data_dir)
 
-    # Configure settings routes with data directory
-    if vault_path:
-        settings.init_settings(vault_path)
+    # Determine effective vault_path: CLI arg > saved settings
+    effective_vault = vault_path
+    if not effective_vault:
+        saved_vault = settings.get_vault_path()
+        if saved_vault:
+            effective_vault = saved_vault
+
+    # Configure explore routes with vault path
+    if effective_vault:
+        explore.set_vault_path(effective_vault)
+
+    # Configure notes routes with vault
+    if effective_vault:
+        notes.set_vault_path(effective_vault)
+
+    # Register vault change callback so notes/explore update dynamically
+    def _on_vault_change(new_path: str | None) -> None:
+        notes.set_vault_path(new_path)
+        explore.set_vault_path(new_path)
+
+    settings.register_vault_change_callback(_on_vault_change)
 
     app.include_router(settings.router, prefix="/api/v1/settings", tags=["Settings"])
 

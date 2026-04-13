@@ -3,6 +3,8 @@
 Provides endpoints for knowledge graph functionality.
 """
 
+from typing import Optional
+
 from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
@@ -18,8 +20,8 @@ router = APIRouter()
 _vault_path: str | None = None
 
 
-def set_vault_path(path: str) -> None:
-    """Set the vault path for explore endpoints."""
+def set_vault_path(path: Optional[str]) -> None:
+    """Set or clear the vault path for explore endpoints."""
     global _vault_path
     _vault_path = path
 
