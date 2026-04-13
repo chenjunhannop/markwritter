@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Markwritter Design System</title>
+  <style>
+    :root {
+      /* Light Mode */
+      --background: 0 0% 100%;
+      --foreground: 222.2 84% 4.9%;
+      --card: 0 0% 100%;
+      --card-foreground: 222.2 84% 4.9%;
+      --popover: 0 0% 100%;
+      --popover-foreground: 222.2 84% 4.9%;
+      --primary: 222.2 47.4% 11.2%;
+      --primary-foreground: 210 40% 98%;
+      --secondary: 210 40% 96.1%;
+      --secondary-foreground: 222.2 47.4% 11.2%;
+      --muted: 210 40% 96.1%;
+      --muted-foreground: 215.4 16.3% 46.9%;
+      --accent: 210 40% 96.1%;
+      --accent-foreground: 222.2 47.4% 11.2%;
+      --destructive: 0 84.2% 60.2%;
+      --destructive-foreground: 210 40% 98%;
+      --border: 214.3 31.8% 91.4%;
+      --input: 214.3 31.8% 91.4%;
+      --ring: 222.2 84% 4.9%;
+      --radius: 0.5rem;
+    }
+
+    .dark {
+      --background: 222.2 84% 4.9%;
+      --foreground: 210 40% 98%;
+      --card: 222.2 84% 4.9%;
+      --card-foreground: 210 40% 98%;
+      --popover: 222.2 84% 4.9%;
+      --popover-foreground: 210 40% 98%;
+      --primary: 210 40% 98%;
+      --primary-foreground: 222.2 47.4% 11.2%;
+      --secondary: 217.2 32.6% 17.5%;
+      --secondary-foreground: 210 40% 98%;
+      --muted: 217.2 32.6% 17.5%;
+      --muted-foreground: 215 20.2% 65.1%;
+      --accent: 217.2 32.6% 17.5%;
+      --accent-foreground: 210 40% 98%;
+      --destructive: 0 62.8% 30.6%;
+      --destructive-foreground: 210 40% 98%;
+      --border: 217.2 32.6% 17.5%;
+      --input: 217.2 32.6% 17.5%;
+      --ring: 212.7 26.8% 83.9%;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background-color: hsl(var(--background));
+      color: hsl(var(--foreground));
+      line-height: 1.5;
+    }
+
+    /* Layout */
+    .app { display: flex; min-height: 100vh; }
+
+    /* Sidebar */
+    .sidebar {
+      width: 256px;
+      background-color: hsl(var(--muted));
+      border-right: 1px solid hsl(var(--border));
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar-header {
+      height: 56px;
+      border-bottom: 1px solid hsl(var(--border));
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+    }
+
+    .sidebar-brand {
+      font-weight: 700;
+      font-size: 18px;
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      padding: 16px 8px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 12px;
+      margin: 4px 0;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: background-color 0.15s;
+      font-size: 14px;
+      color: hsl(var(--foreground));
+    }
+
+    .nav-item:hover {
+      background-color: hsl(var(--accent));
+    }
+
+    .nav-item.active {
+      background-color: hsl(var(--primary));
+      color: hsl(var(--primary-foreground));
+    }
+
+    .nav-icon {
+      width: 20px;
+      height: 20px;
+      opacity: 0.7;
+    }
+
+    /* Main Content */
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .header {
+      height: 56px;
+      border-bottom: 1px solid hsl(var(--border));
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      justify-content: space-between;
+    }
+
+    .header-title {
+      font-weight: 600;
+      font-size: 18px;
+    }
+
+    .theme-toggle {
+      padding: 8px 16px;
+      border-radius: var(--radius);
+      border: 1px solid hsl(var(--border));
+      background: hsl(var(--background));
+      color: hsl(var(--foreground));
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .page-content {
+      flex: 1;
+      padding: 24px;
+      overflow-y: auto;
+    }
+
+    /* Typography */
+    h1 { font-size: 24px; font-weight: 700; margin-bottom: 24px; }
+    h2 { font-size: 20px; font-weight: 600; margin-bottom: 16px; }
+    h3 { font-size: 16px; font-weight: 600; margin-bottom: 12px; }
+    p { font-size: 14px; color: hsl(var(--muted-foreground)); }
+
+    /* Components - Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: var(--radius);
+      font-size: 14px;
+      font-weight: 500;
+      border: none;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-primary {
+      background-color: hsl(var(--primary));
+      color: hsl(var(--primary-foreground));
+    }
+
+    .btn-primary:hover {
+      opacity: 0.9;
+    }
+
+    .btn-secondary {
+      background-color: hsl(var(--secondary));
+      color: hsl(var(--secondary-foreground));
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: hsl(var(--foreground));
+    }
+
+    .btn-ghost:hover {
+      background-color: hsl(var(--accent));
+    }
+
+    .btn-outline {
+      border: 1px solid hsl(var(--border));
+      background: hsl(var(--background));
+      color: hsl(var(--foreground));
+    }
+
+    .btn-sm { padding: 4px 12px; font-size: 12px; }
+    .btn-lg { padding: 12px 24px; font-size: 16px; }
+
+    /* Components - Cards */
+    .card {
+      border: 1px solid hsl(var(--border));
+      border-radius: var(--radius);
+      background-color: hsl(var(--card));
+      padding: 24px;
+    }
+
+    .card-header { margin-bottom: 16px; }
+    .card-title { font-weight: 600; font-size: 16px; }
+    .card-description { font-size: 14px; color: hsl(var(--muted-foreground)); margin-top: 4px; }
+    .card-content { font-size: 14px; }
+    .card-footer {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid hsl(var(--border));
+      display: flex;
+      gap: 8px;
+    }
+
+    /* Components - Input */
+    .input {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid hsl(var(--border));
+      border-radius: var(--radius);
+      font-size: 14px;
+      background: hsl(var(--background));
+      color: hsl(var(--foreground));
+    }
+
+    .input:focus {
+      outline: none;
+      border-color: hsl(var(--ring));
+      box-shadow: 0 0 0 3px hsla(var(--ring), 0.1);
+    }
+
+    /* Components - Badge */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .badge-default {
+      background-color: hsl(var(--primary));
+      color: hsl(var(--primary-foreground));
+    }
+
+    .badge-secondary {
+      background-color: hsl(var(--secondary));
+      color: hsl(var(--secondary-foreground));
+    }
+
+    /* Components - Alert */
+    .alert {
+      padding: 12px 16px;
+      border-radius: var(--radius);
+      border-left: 4px solid;
+      margin-bottom: 16px;
+    }
+
+    .alert-destructive {
+      background-color: hsla(var(--destructive), 0.1);
+      border-color: hsl(var(--destructive));
+      color: hsl(var(--destructive));
+    }
+
+    /* Grid for components showcase */
+    .component-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+      margin: 24px 0;
+    }
+
+    /* Color swatches */
+    .color-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 12px;
+      margin: 16px 0;
+    }
+
+    .color-swatch {
+      height: 80px;
+      border-radius: var(--radius);
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 8px;
+      font-size: 11px;
+      font-family: monospace;
+      border: 1px solid hsl(var(--border));
+    }
+
+    /* Page sections */
+    .section { margin-bottom: 48px; }
+
+    /* Chat preview */
+    .chat-preview {
+      border: 1px solid hsl(var(--border));
+      border-radius: var(--radius);
+      height: 400px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .chat-header {
+      height: 48px;
+      border-bottom: 1px solid hsl(var(--border));
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 8px;
+    }
+
+    .chat-messages {
+      flex: 1;
+      padding: 16px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .message {
+      max-width: 80%;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 14px;
+    }
+
+    .message-user {
+      align-self: flex-end;
+      background-color: hsl(var(--primary));
+      color: hsl(var(--primary-foreground));
+    }
+
+    .message-assistant {
+      align-self: flex-start;
+      background-color: hsl(var(--secondary));
+      color: hsl(var(--foreground));
+    }
+
+    .chat-input {
+      border-top: 1px solid hsl(var(--border));
+      padding: 12px;
+    }
+
+    /* Navigation preview */
+    .nav-preview {
+      border: 1px solid hsl(var(--border));
+      border-radius: var(--radius);
+      padding: 16px;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .sidebar { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <div class="sidebar-header">
+        <span class="sidebar-brand">Markwritter</span>
+      </div>
+      <div class="sidebar-nav">
+        <div class="nav-item" onclick="showPage('chat')">
+          <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+          </svg>
+          Chat
+        </div>
+        <div class="nav-item" onclick="showPage('skills')">
+          <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+          </svg>
+          Skills
+        </div>
+        <div class="nav-item" onclick="showPage('explore')">
+          <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+          </svg>
+          Explore
+        </div>
+        <div class="nav-item" onclick="showPage('query')">
+          <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+          </svg>
+          Query
+        </div>
+        <div class="nav-item" onclick="showPage('record')">
+          <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+          </svg>
+          Record
+        </div>
+        <div class="nav-item" onclick="showPage('logs')">
+          <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+          Logs
+        </div>
+        <div class="nav-item" onclick="showPage('settings')">
+          <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+          Settings
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <header class="header">
+        <h1 class="header-title" id="page-title">Design System</h1>
+        <button class="theme-toggle" onclick="toggleTheme()">🌙 Dark Mode</button>
+      </header>
+
+      <div class="page-content">
+        <!-- Foundations Section -->
+        <div class="section" id="page-foundations">
+          <h1>设计系统基础</h1>
+
+          <h2>颜色系统</h2>
+          <div class="color-grid">
+            <div class="color-swatch" style="background: hsl(var(--background)); color: hsl(var(--foreground));">
+              background
+            </div>
+            <div class="color-swatch" style="background: hsl(var(--foreground)); color: hsl(var(--background));">
+              foreground
+            </div>
+            <div class="color-swatch" style="background: hsl(var(--primary)); color: hsl(var(--primary-foreground));">
+              primary
+            </div>
+            <div class="color-swatch" style="background: hsl(var(--secondary)); color: hsl(var(--secondary-foreground));">
+              secondary
+            </div>
+            <div class="color-swatch" style="background: hsl(var(--muted)); color: hsl(var(--muted-foreground));">
+              muted
+            </div>
+            <div class="color-swatch" style="background: hsl(var(--accent)); color: hsl(var(--accent-foreground));">
+              accent
+            </div>
+            <div class="color-swatch" style="background: hsl(var(--destructive)); color: white;">
+              destructive
+            </div>
+            <div class="color-swatch" style="background: hsl(var(--border));">
+              border
+            </div>
+          </div>
+
+          <h2>按钮组件</h2>
+          <div class="component-grid">
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">Variants</div>
+                <div class="card-description">不同场景的按钮样式</div>
+              </div>
+              <div class="card-content" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="btn btn-primary">Primary</button>
+                <button class="btn btn-secondary">Secondary</button>
+                <button class="btn btn-ghost">Ghost</button>
+                <button class="btn btn-outline">Outline</button>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">Sizes</div>
+                <div class="card-description">不同尺寸的按钮</div>
+              </div>
+              <div class="card-content" style="display: flex; align-items: center; gap: 8px;">
+                <button class="btn btn-primary btn-sm">Small</button>
+                <button class="btn btn-primary">Default</button>
+                <button class="btn btn-primary btn-lg">Large</button>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">With Icons</div>
+                <div class="card-description">带图标的按钮</div>
+              </div>
+              <div class="card-content" style="display: flex; gap: 8px;">
+                <button class="btn btn-primary">
+                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                  </svg>
+                  新建
+                </button>
+                <button class="btn btn-secondary">
+                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v4a2 2 0 002 2h12a2 2 0 002-2v-4"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4L8.414 7.586A2 2 0 007.828 9H12v10m0-10V4m0 0l3.586 3.586A2 2 0 0114 9H8"/>
+                  </svg>
+                  上传
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <h2>卡片组件</h2>
+          <div class="component-grid">
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">卡片标题</div>
+                <div class="card-description">这是一段卡片描述文字</div>
+              </div>
+              <div class="card-content">
+                这是卡片的主要内容区域。可以在这里放置任何内容。
+              </div>
+              <div class="card-footer">
+                <button class="btn btn-primary btn-sm">主要操作</button>
+                <button class="btn btn-ghost btn-sm">取消</button>
+              </div>
+            </div>
+          </div>
+
+          <h2>徽章组件</h2>
+          <div class="component-grid">
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">Badge Variants</div>
+              </div>
+              <div class="card-content" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <span class="badge badge-default">默认</span>
+                <span class="badge badge-secondary">次要</span>
+                <span class="badge" style="background: #22C55E; color: white;">成功</span>
+                <span class="badge" style="background: #3B82F6; color: white;">信息</span>
+                <span class="badge" style="background: #F59E0B; color: white;">警告</span>
+                <span class="badge" style="background: #EF4444; color: white;">错误</span>
+              </div>
+            </div>
+          </div>
+
+          <h2>表单组件</h2>
+          <div class="component-grid">
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">输入框</div>
+                <div class="card-description">各种表单输入控件</div>
+              </div>
+              <div class="card-content" style="display: flex; flex-direction: column; gap: 12px;">
+                <input type="text" class="input" placeholder="请输入...">
+                <input type="email" class="input" placeholder="邮箱地址">
+                <textarea class="input" rows="3" placeholder="多行文本"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <h2>警告提示</h2>
+          <div class="component-grid">
+            <div class="card">
+              <div class="card-content">
+                <div class="alert alert-destructive">
+                  <strong>错误!</strong> 这是一个错误提示信息。
+                </div>
+                <div class="alert" style="background: hsla(var(--primary), 0.1); border-color: hsl(var(--primary));">
+                  <strong>信息</strong> 这是一个普通提示信息。
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chat Page Preview -->
+        <div class="section" id="page-chat" style="display: none;">
+          <h1>Chat 页面预览</h1>
+          <div class="chat-preview">
+            <div class="chat-header">
+              <span style="font-weight: 600; font-size: 14px;">Chat</span>
+              <span class="badge badge-secondary">2 sources</span>
+              <div style="flex: 1;"></div>
+              <button class="btn btn-ghost btn-sm">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+              </button>
+            </div>
+            <div class="chat-messages">
+              <div class="message message-user">
+                如何连接数据库？
+              </div>
+              <div class="message message-assistant">
+                要连接数据库，你需要配置数据库连接字符串。通常在 `.env` 文件中设置 `DATABASE_URL` 环境变量。
+              </div>
+              <div class="message message-user">
+                能给我一个示例吗？
+              </div>
+              <div class="message message-assistant">
+                当然，这是一个 PostgreSQL 连接示例：<br><br>
+                <code>DATABASE_URL="postgresql://user:password@localhost:5432/dbname"</code>
+              </div>
+            </div>
+            <div class="chat-input">
+              <input type="text" class="input" placeholder="输入消息...">
+            </div>
+          </div>
+        </div>
+
+        <!-- Skills Page Preview -->
+        <div class="section" id="page-skills" style="display: none;">
+          <h1>Skills 页面预览</h1>
+          <div class="component-grid">
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title" style="display: flex; align-items: center; gap: 8px;">
+                  <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+                  </svg>
+                  Hello Skill
+                </div>
+                <div class="card-description">运行一个简单的示例技能</div>
+              </div>
+              <div class="card-content">
+                这是一个用于测试和演示的基础技能，展示框架的基本功能。
+              </div>
+              <div class="card-footer">
+                <button class="btn btn-primary btn-sm">运行</button>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title" style="display: flex; align-items: center; gap: 8px;">
+                  <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                  </svg>
+                  Summarize
+                </div>
+                <div class="card-description">总结笔记内容</div>
+              </div>
+              <div class="card-content">
+                AI 驱动的内容总结功能，可以快速提取笔记要点。
+              </div>
+              <div class="card-footer">
+                <button class="btn btn-primary btn-sm">运行</button>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title" style="display: flex; align-items: center; gap: 8px;">
+                  <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                  </svg>
+                  Search
+                </div>
+                <div class="card-description">语义搜索文档</div>
+              </div>
+              <div class="card-content">
+                使用向量搜索技术，支持自然语言查询。
+              </div>
+              <div class="card-footer">
+                <button class="btn btn-primary btn-sm">运行</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Query Page Preview -->
+        <div class="section" id="page-query" style="display: none;">
+          <h1>Query 页面预览</h1>
+          <div class="card">
+            <div class="card-content">
+              <div style="display: flex; gap: 8px; margin-bottom: 24px;">
+                <select class="input" style="width: auto;">
+                  <option>Hybrid</option>
+                  <option>Keyword</option>
+                  <option>Semantic</option>
+                </select>
+                <input type="text" class="input" placeholder="搜索笔记..." style="flex: 1;">
+                <button class="btn btn-primary">
+                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                  </svg>
+                </button>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 12px;">
+                <div class="card" style="cursor: pointer;">
+                  <div class="card-header">
+                    <div class="card-title">📄 数据库连接配置指南</div>
+                    <div class="card-description" style="margin-top: 8px;">
+                      本文档介绍了如何配置各种数据库连接，包括 PostgreSQL、MySQL 和 MongoDB...
+                    </div>
+                  </div>
+                  <div class="card-footer">
+                    <span class="badge badge-secondary">database</span>
+                    <span class="badge badge-secondary">config</span>
+                    <span style="font-size: 12px; color: hsl(var(--muted-foreground)); margin-left: auto;">Score: 0.95</span>
+                  </div>
+                </div>
+
+                <div class="card" style="cursor: pointer;">
+                  <div class="card-header">
+                    <div class="card-title">📄 API 设计最佳实践</div>
+                    <div class="card-description" style="margin-top: 8px;">
+                      RESTful API 设计的最佳实践，包括资源命名、状态码使用、分页和过滤...
+                    </div>
+                  </div>
+                  <div class="card-footer">
+                    <span class="badge badge-secondary">api</span>
+                    <span class="badge badge-secondary">design</span>
+                    <span style="font-size: 12px; color: hsl(var(--muted-foreground)); margin-left: auto;">Score: 0.87</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Record Page Preview -->
+        <div class="section" id="page-record" style="display: none;">
+          <h1>Record 页面预览</h1>
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Quick Note</div>
+              <div class="card-description">快速记录你的想法</div>
+            </div>
+            <div class="card-content">
+              <textarea class="input" rows="6" placeholder="输入笔记内容..." style="resize: vertical;"></textarea>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px;">
+                <span style="font-size: 12px; color: hsl(var(--muted-foreground));">按 Ctrl+Enter 保存</span>
+                <button class="btn btn-primary">
+                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                  </svg>
+                  保存
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Logs Page Preview -->
+        <div class="section" id="page-logs" style="display: none;">
+          <h1>Logs 页面预览</h1>
+          <div class="card">
+            <div class="card-content" style="font-family: monospace; font-size: 13px;">
+              <div style="display: flex; gap: 8px; margin-bottom: 16px; padding: 8px; border-bottom: 1px solid hsl(var(--border));">
+                <select class="input" style="width: auto; padding: 4px 8px;">
+                  <option>All Levels</option>
+                  <option>INFO</option>
+                  <option>WARN</option>
+                  <option>ERROR</option>
+                </select>
+                <input type="text" class="input" placeholder="过滤日志..." style="flex: 1;">
+                <button class="btn btn-ghost btn-sm">
+                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                  </svg>
+                </button>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 4px;">
+                <div style="padding: 8px; border-radius: 4px; background: hsla(var(--primary), 0.05);">
+                  <span style="color: #3B82F6;">[INFO]</span>
+                  <span style="color: hsl(var(--muted-foreground)); margin: 0 8px;">10:23:45</span>
+                  <span>Application started successfully</span>
+                </div>
+                <div style="padding: 8px; border-radius: 4px; background: hsla(45, 100%, 50%, 0.05);">
+                  <span style="color: #F59E0B;">[WARN]</span>
+                  <span style="color: hsl(var(--muted-foreground)); margin: 0 8px;">10:24:12</span>
+                  <span>High memory usage detected: 85%</span>
+                </div>
+                <div style="padding: 8px; border-radius: 4px; background: hsla(0, 84%, 60%, 0.05);">
+                  <span style="color: #EF4444;">[ERROR]</span>
+                  <span style="color: hsl(var(--muted-foreground)); margin: 0 8px;">10:25:00</span>
+                  <span>Failed to connect to database</span>
+                </div>
+                <div style="padding: 8px; border-radius: 4px; background: hsla(0, 0%, 50%, 0.05);">
+                  <span style="color: #64748B;">[DEBUG]</span>
+                  <span style="color: hsl(var(--muted-foreground)); margin: 0 8px;">10:25:30</span>
+                  <span>Processing request #12345</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Settings Page Preview -->
+        <div class="section" id="page-settings" style="display: none;">
+          <h1>Settings 页面预览</h1>
+
+          <div class="card" style="margin-bottom: 16px;">
+            <div class="card-header">
+              <div class="card-title">外观设置</div>
+            </div>
+            <div class="card-content" style="display: flex; flex-direction: column; gap: 16px;">
+              <div>
+                <label style="font-size: 14px; font-weight: 500; display: block; margin-bottom: 8px;">主题模式</label>
+                <div style="display: flex; gap: 16px;">
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 14px;">
+                    <input type="radio" name="theme" checked> 浅色
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 14px;">
+                    <input type="radio" name="theme"> 深色
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 14px;">
+                    <input type="radio" name="theme"> 跟随系统
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <label style="font-size: 14px; font-weight: 500; display: block; margin-bottom: 8px;">侧边栏宽度</label>
+                <input type="range" min="16" max="320" value="56" style="width: 100%;">
+                <div style="display: flex; justify-content: space-between; font-size: 12px; color: hsl(var(--muted-foreground));">
+                  <span>16px</span>
+                  <span>56px</span>
+                  <span>320px</span>
+                </div>
+              </div>
+            </div>
+            <div class="card-footer">
+              <button class="btn btn-primary btn-sm">保存更改</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">LLM 配置</div>
+            </div>
+            <div class="card-content" style="display: flex; flex-direction: column; gap: 16px;">
+              <div>
+                <label style="font-size: 14px; font-weight: 500; display: block; margin-bottom: 8px;">API Key</label>
+                <input type="password" class="input" value="sk-****************" readonly>
+              </div>
+              <div>
+                <label style="font-size: 14px; font-weight: 500; display: block; margin-bottom: 8px;">模型</label>
+                <select class="input">
+                  <option>claude-sonnet-4-6</option>
+                  <option>claude-opus-4-6</option>
+                  <option>gpt-4</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Explore Page Preview -->
+        <div class="section" id="page-explore" style="display: none;">
+          <h1>Explore 页面预览</h1>
+          <div class="card">
+            <div class="card-content" style="height: 400px; background: hsl(var(--muted)); display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden;">
+              <!-- 知识图谱可视化占位 -->
+              <div style="position: relative; width: 300px; height: 300px;">
+                <div style="position: absolute; top: 50%; left: 50%; width: 40px; height: 40px; background: #EF4444; border-radius: 50%; transform: translate(-50%, -50%); display: flex; align-items: center; justify-content: center; color: white; font-size: 12px;">核心</div>
+
+                <div style="position: absolute; top: 20%; left: 30%; width: 30px; height: 30px; background: #3B82F6; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 10px;">节点 A</div>
+                <div style="position: absolute; top: 20%; left: 70%; width: 25px; height: 25px; background: #22C55E; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 10px;">B</div>
+                <div style="position: absolute; bottom: 20%; left: 70%; width: 35px; height: 35px; background: #F59E0B; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 10px;">节点 C</div>
+                <div style="position: absolute; bottom: 20%; left: 30%; width: 28px; height: 28px; background: #94A3B8; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 10px;">D</div>
+
+                <!-- 连接线 -->
+                <svg style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;">
+                  <line x1="150" y1="150" x2="90" y2="60" stroke="#64748B" stroke-width="1"/>
+                  <line x1="150" y1="150" x2="210" y2="60" stroke="#64748B" stroke-width="1"/>
+                  <line x1="150" y1="150" x2="210" y2="240" stroke="#64748B" stroke-width="1"/>
+                  <line x1="150" y1="150" x2="90" y2="240" stroke="#64748B" stroke-width="1"/>
+                </svg>
+              </div>
+
+              <!-- 图例 -->
+              <div style="position: absolute; bottom: 16px; left: 16px; background: hsl(var(--background)); border: 1px solid hsl(var(--border)); border-radius: 8px; padding: 12px;">
+                <div style="font-size: 12px; font-weight: 600; margin-bottom: 8px;">连接数</div>
+                <div style="display: flex; flex-direction: column; gap: 4px; font-size: 11px;">
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="width: 12px; height: 12px; background: #94A3B8; border-radius: 50%;"></div>
+                    <span>0</span>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="width: 12px; height: 12px; background: #22C55E; border-radius: 50%;"></div>
+                    <span>1-2</span>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="width: 12px; height: 12px; background: #3B82F6; border-radius: 50%;"></div>
+                    <span>3-5</span>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="width: 12px; height: 12px; background: #F59E0B; border-radius: 50%;"></div>
+                    <span>6-10</span>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="width: 12px; height: 12px; background: #EF4444; border-radius: 50%;"></div>
+                    <span>10+</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 缩放控制 -->
+              <div style="position: absolute; top: 16px; right: 16px; background: hsl(var(--background)); border: 1px solid hsl(var(--border)); border-radius: 8px; display: flex; flex-direction: column;">
+                <button class="btn btn-ghost btn-sm" style="border-radius: 0;">+</button>
+                <div style="height: 1px; background: hsl(var(--border));"></div>
+                <button class="btn btn-ghost btn-sm" style="border-radius: 0;">−</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    function toggleTheme() {
+      document.documentElement.classList.toggle('dark');
+      const btn = document.querySelector('.theme-toggle');
+      btn.textContent = document.documentElement.classList.contains('dark') ? '☀️ Light Mode' : '🌙 Dark Mode';
+    }
+
+    function showPage(pageId) {
+      // Hide all pages
+      document.querySelectorAll('.section').forEach(el => {
+        el.style.display = 'none';
+      });
+
+      // Update nav items
+      document.querySelectorAll('.nav-item').forEach(el => {
+        el.classList.remove('active');
+      });
+
+      // Show selected page
+      const targetPage = document.getElementById('page-' + pageId);
+      if (targetPage) {
+        targetPage.style.display = 'block';
+      }
+
+      // Update page title
+      const titles = {
+        'foundations': 'Design System',
+        'chat': 'Chat 页面',
+        'skills': 'Skills 页面',
+        'explore': 'Explore 页面',
+        'query': 'Query 页面',
+        'record': 'Record 页面',
+        'logs': 'Logs 页面',
+        'settings': 'Settings 页面'
+      };
+      document.getElementById('page-title').textContent = titles[pageId] || 'Design System';
+
+      // Update active nav item
+      const navItems = document.querySelectorAll('.nav-item');
+      const navIndex = ['chat', 'skills', 'explore', 'query', 'record', 'logs', 'settings'].indexOf(pageId);
+      if (navIndex >= 0 && navItems[navIndex]) {
+        navItems[navIndex].classList.add('active');
+      }
+    }
+
+    // Initialize - show foundations by default
+    showPage('foundations');
+  </script>
+</body>
+</html>
