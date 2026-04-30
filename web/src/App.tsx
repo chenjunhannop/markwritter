@@ -1,28 +1,34 @@
-import { Navigate, Route, Routes } from "react-router-dom";
-import { Toaster } from "sonner";
-import { ChatPage } from "@/features/chat/chat-page";
-import { ExplorePage } from "@/features/explore/explore-page";
-import { LogsPage } from "@/features/logs/logs-page";
-import { QueryPage } from "@/features/query/query-page";
-import { RecordPage } from "@/features/record/record-page";
-import { SettingsPage } from "@/features/settings/settings-page";
-import { SkillsPage } from "@/features/skills/skills-page";
-import { AppLayout } from "@/layout/app-layout";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter as Router } from "react-router-dom";
+import { AppRouter } from "@/components/router/app-router";
+import { ThemeProvider } from "@/components/theme-provider";
+import { SidebarConfigProvider } from "@/contexts/sidebar-context";
 
-export function App() {
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000,
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
+
+// Get basename from environment (for deployment) or use empty string for development
+const basename = import.meta.env.VITE_BASENAME || "";
+
+function App() {
   return (
-    <AppLayout>
-      <Routes>
-        <Route path="/chat" element={<ChatPage />} />
-        <Route path="/skills" element={<SkillsPage />} />
-        <Route path="/explore" element={<ExplorePage />} />
-        <Route path="/query" element={<QueryPage />} />
-        <Route path="/record" element={<RecordPage />} />
-        <Route path="/logs" element={<LogsPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
-        <Route path="/" element={<Navigate to="/chat" replace />} />
-      </Routes>
-      <Toaster />
-    </AppLayout>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
+        <SidebarConfigProvider>
+          <Router basename={basename}>
+            <AppRouter />
+          </Router>
+        </SidebarConfigProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
   );
 }
+
+export default App;

@@ -1,5 +1,4 @@
-import type { NodeProps } from "@xyflow/react";
-import { Handle, Position } from "@xyflow/react";
+import { Handle, type NodeProps, Position } from "@xyflow/react";
 
 const NODE_COLORS: Record<string, string> = {
   person: "#6B8DB5",
@@ -34,7 +33,6 @@ export function GraphNode({ data, selected }: NodeProps) {
         className="!w-2 !h-2 !bg-muted-foreground"
         style={{ top: 0 }}
       />
-
       <div
         className="flex h-16 w-16 items-center justify-center rounded-full border-2 transition-shadow"
         style={{
@@ -51,14 +49,12 @@ export function GraphNode({ data, selected }: NodeProps) {
           {truncateLabel(nodeData.label)}
         </div>
       </div>
-
       <div
         className="pointer-events-none absolute -bottom-5 text-xs text-muted-foreground text-center whitespace-nowrap max-w-20 truncate"
         title={nodeData.label}
       >
         {truncateLabel(nodeData.label)}
       </div>
-
       <Handle
         type="source"
         position={Position.Bottom}

@@ -113,7 +113,7 @@ function LLMTab({ settings }: { settings: AppSettings }) {
           <label htmlFor="llm-api-key" className="text-sm font-medium">
             API Key
           </label>
-          <Badge variant={settings.api_key_set ? "success" : "destructive"}>
+          <Badge variant={settings.api_key_set ? "outline" : "destructive"}>
             {settings.api_key_set ? "已设置" : "未设置"}
           </Badge>
         </div>
@@ -173,7 +173,7 @@ function VaultTab({ settings }: { settings: AppSettings }) {
         <div className="flex items-center gap-2">
           <div
             className={`h-2.5 w-2.5 rounded-full ${
-              health?.vault_connected ? "bg-status-success" : "bg-status-error"
+              health?.vault_connected ? "bg-green-600" : "bg-red-600"
             }`}
           />
           <span className="text-sm text-muted-foreground">

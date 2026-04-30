@@ -37,13 +37,11 @@ export function NodeDetailPanel({
           <X className="h-4 w-4" />
         </button>
       </div>
-
       {isLoading && (
         <div className="flex flex-1 items-center justify-center">
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
         </div>
       )}
-
       {detail && !isLoading && (
         <ScrollArea className="flex-1">
           <div className="space-y-4 p-4">
@@ -58,7 +56,6 @@ export function NodeDetailPanel({
                 {detail.node.type}
               </Badge>
             </div>
-
             {detail.connections.incoming.length > 0 && (
               <div className="space-y-1.5">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
@@ -80,7 +77,6 @@ export function NodeDetailPanel({
                 ))}
               </div>
             )}
-
             {detail.connections.outgoing.length > 0 && (
               <div className="space-y-1.5">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
@@ -102,7 +98,6 @@ export function NodeDetailPanel({
                 ))}
               </div>
             )}
-
             {detail.relatedNodes.length > 0 && (
               <div className="space-y-1.5">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">

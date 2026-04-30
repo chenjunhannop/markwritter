@@ -156,11 +156,11 @@ export function NoteEditor({ filePath }: NoteEditorProps) {
           <span
             className={
               saveStatus === "saved"
-                ? "text-xs text-status-success"
+                ? "text-xs text-green-600"
                 : saveStatus === "saving"
                   ? "text-xs text-muted-foreground"
                   : saveStatus === "dirty"
-                    ? "text-xs text-status-warning"
+                    ? "text-xs text-yellow-600"
                     : "text-xs text-muted-foreground"
             }
           >

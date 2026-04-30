@@ -21,14 +21,12 @@ function DiffSegment({ segment }: { segment: DiffDelta }) {
   }
   if (segment.op === "insert") {
     return (
-      <span className="bg-status-success/15 rounded-sm px-0.5">
-        {segment.text}
-      </span>
+      <span className="bg-green-500/15 rounded-sm px-0.5">{segment.text}</span>
     );
   }
   if (segment.op === "delete") {
     return (
-      <span className="bg-status-error/15 line-through rounded-sm px-0.5">
+      <span className="bg-red-500/15 line-through rounded-sm px-0.5">
         {segment.text}
       </span>
     );
@@ -94,9 +92,9 @@ export function DiffPreview({
 
   if (accepted) {
     return (
-      <div className="flex items-center gap-2 rounded-md border border-status-success/30 bg-status-success/10 px-3 py-2">
-        <Check className="h-4 w-4 text-status-success" />
-        <span className="text-sm text-status-success">Changes accepted</span>
+      <div className="flex items-center gap-2 rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2">
+        <Check className="h-4 w-4 text-green-600" />
+        <span className="text-sm text-green-600">Changes accepted</span>
         <Button
           variant="outline"
           size="sm"

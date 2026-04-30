@@ -211,31 +211,31 @@ function StaticTreeItems({
   selectedPaths: Set<string>;
   onToggle: (path: string) => void;
 }) {
-  const files = [
+  const files: TreeNode[] = [
     {
       name: "notes",
       path: "notes",
-      type: "folder" as const,
+      type: "folder",
       children: [
         {
           name: "chapter-1.md",
           path: "notes/chapter-1.md",
-          type: "file" as const,
+          type: "file",
         },
         {
           name: "chapter-2.md",
           path: "notes/chapter-2.md",
-          type: "file" as const,
+          type: "file",
         },
         {
           name: "ideas",
           path: "notes/ideas",
-          type: "folder" as const,
+          type: "folder",
           children: [
             {
               name: "brainstorm.md",
               path: "notes/ideas/brainstorm.md",
-              type: "file" as const,
+              type: "file",
             },
           ],
         },
@@ -248,7 +248,7 @@ function StaticTreeItems({
       {files.map((node) => (
         <TreeItem
           key={node.path}
-          node={node as TreeNode}
+          node={node}
           selectedPaths={selectedPaths}
           onToggle={onToggle}
           depth={0}

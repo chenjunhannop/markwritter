@@ -1,34 +1,11 @@
-import { useEffect } from "react";
-import { useUiStore } from "@/stores/ui-store";
+import * as React from "react";
+import { ThemeProviderContext } from "@/contexts/theme-context";
 
-function getSystemTheme(): "light" | "dark" {
-  if (typeof window === "undefined") return "light";
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light";
-}
+export const useTheme = () => {
+  const context = React.useContext(ThemeProviderContext);
 
-function applyTheme(theme: "light" | "dark" | "system") {
-  const resolved = theme === "system" ? getSystemTheme() : theme;
-  const root = document.documentElement;
-  root.classList.remove("light", "dark");
-  root.classList.add(resolved);
-}
+  if (context === undefined)
+    throw new Error("useTheme must be used within a ThemeProvider");
 
-export function useTheme() {
-  const theme = useUiStore((s) => s.theme);
-
-  useEffect(() => {
-    applyTheme(theme);
-  }, [theme]);
-
-  useEffect(() => {
-    if (theme !== "system") return;
-    const mql = window.matchMedia("(prefers-color-scheme: dark)");
-    const handler = () => applyTheme("system");
-    mql.addEventListener("change", handler);
-    return () => mql.removeEventListener("change", handler);
-  }, [theme]);
-
-  return theme;
-}
+  return context;
+};
