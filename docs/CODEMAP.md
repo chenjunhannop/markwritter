@@ -78,9 +78,7 @@
 
 ### Skills (`skills/`)
 
-| Skill | Purpose | Files |
-|-------|---------|-------|
-| `hello` | Example skill | `skill.yaml`, `run.py` |
+Custom skill definitions. Add skill directories here with `skill.yaml` and `run.py`.
 
 ---
 

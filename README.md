@@ -53,7 +53,6 @@ markwritter/
 │   ├── lib/              # Utilities
 │   └── hooks/            # React hooks
 ├── skills/               # Skill definitions
-│   └── hello/            # Example skill
 ├── tests/                # Test suite
 ├── note/                 # Design documentation
 └── docs/                 # Project documentation
@@ -122,13 +121,8 @@ uvicorn markwritter.api.app:get_app --factory --reload
 # List available skills
 markwritter list-skills
 
-# Run a skill directly
-markwritter run hello name=World
-
 # Interactive chat mode
 markwritter chat
-> hello
-> hello --name Alice
 ```
 
 ## Project Status
